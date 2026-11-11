@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>La Nebbia Ululante</title>
+<style>
+html,body{margin:0;padding:0;background:#000;height:100%;overflow:hidden;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+body{display:flex;align-items:flex-start;justify-content:center}
+#wrap{position:relative;margin-top:max(8px,env(safe-area-inset-top))}
+#crt{position:relative;overflow:hidden;border-radius:22px/18px;background:#010605;
+ box-shadow:0 0 0 2px #050d0c,0 0 40px rgba(60,200,180,.10),inset 0 0 60px rgba(0,0,0,.9)}
+#crt canvas{position:absolute;left:0;top:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+#glow{filter:blur(5px) brightness(1.7) saturate(1.2);opacity:.55;mix-blend-mode:screen}
+#scr{animation:flick .13s steps(2) infinite}
+@keyframes flick{0%{opacity:1}50%{opacity:.965}}
+#noise{opacity:.13;mix-blend-mode:screen;image-rendering:auto}
+.scan{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,0) var(--h1),rgba(0,0,0,.38) var(--h1),rgba(0,0,0,.38) var(--h2))}
+.band{position:absolute;left:0;right:0;height:22%;pointer-events:none;background:linear-gradient(to bottom,rgba(120,255,230,0),rgba(120,255,230,.05),rgba(120,255,230,0));animation:roll 7s linear infinite}
+@keyframes roll{0%{top:-25%}100%{top:105%}}
+.vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 55%,rgba(0,0,0,.55) 85%,rgba(0,0,0,.95) 100%)}
+.glass{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 30% 18%,rgba(200,255,250,.06),rgba(0,0,0,0) 40%)}
+#inp{position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:0;font-size:16px;border:0;padding:0;color:transparent;background:transparent;caret-color:transparent}
+</style>
+</head>
+<body>
+<div id="wrap"><div id="crt">
+<canvas id="scr" width="264" height="216"></canvas>
+<canvas id="glow" width="264" height="216"></canvas>
+<canvas id="noise" width="132" height="108"></canvas>
+<div class="band"></div><div class="scan"></div><div class="vig"></div><div class="glass"></div>
+</div></div>
+<input id="inp" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send">
+<script>
+const FONT={" ": "000000000000000000", "!": "000808080800080000", "\"": "001414140000000000", "#": "0014143e143e141400", "$": "081c2a281c0a2a1c08", "%": "102a12040812150200", "&": "001824241826241a00", "'": "000808080000000000", "(": "000408080808080400", ")": "000804040404040800", "*": "000022143e14220000", "+": "000008083e08080000", ",": "00000000000c040408", "-": "000000003e00000000", ".": "00000000000c0c0000", "/": "000202040810100000", "0": "000c121212120c0000", "1": "0008180808081c0000", "2": "000c120204081e0000", "3": "001e040c02021c0000", "4": "00040c14243e040000", "5": "001e101c02021c0000", "6": "000c101c12120c0000", "7": "001e02020408080000", "8": "000c120c12120c0000", "9": "000c12120e020c0000", ":": "00000c0c000c0c0000", ";": "00000c0c000c040408", "<": "000006182018060000", "=": "0000003e003e000000", ">": "0000300c020c300000", "?": "0c12020c0800080000", "@": "001c242a2c201c0000", "A": "000814223e22220000", "B": "003c223c22223c0000", "C": "000c121010120c0000", "D": "001c121212121c0000", "E": "001e101c10101e0000", "F": "001e101c1010100000", "G": "000c121016120c0000", "H": "0012121e1212120000", "I": "001c080808081c0000", "J": "000e04040424180000", "K": "001214181412120000", "L": "0010101010101e0000", "M": "0022362a2a22220000", "N": "00121a161212120000", "O": "001c222222221c0000", "P": "001c12121c10100000", "Q": "000c12121a160c0200", "R": "001c12121c12120000", "S": "000c120804120c0000", "T": "003e08080808080000", "U": "0012121212120c0000", "V": "001212121e0c0c0000", "W": "0022222a2a36220000", "X": "002214080814220000", "Y": "002222140808080000", "Z": "001e020408101e0000", "[": "001c101010101c0000", "\\": "001010080402020000", "]": "001c040404041c0000", "^": "000814220000000000", "_": "00000000000000003e", "`": "000804000000000000", "a": "0000000e12120e0000", "b": "0010101c12121c0000", "c": "0000000e10100e0000", "d": "0002020e12120e0000", "e": "0000000c16180e0000", "f": "00040a081c08080000", "g": "0000000c12120e020c", "h": "0010101c1212120000", "i": "0008001808081c0000", "j": "0004000c0404041408", "k": "001010141814120000", "l": "0018080808081c0000", "m": "000000342a2a220000", "n": "0000001c1212120000", "o": "0000000c12120c0000", "p": "0000001c12121c1010", "q": "0000000e12120e0202", "r": "000000141a10100000", "s": "0000000e18061c0000", "t": "0008081c080a040000", "u": "0000001212120e0000", "v": "00000012120c0c0000", "w": "000000222a2a140000", "x": "000000120c0c120000", "y": "0000001212120e120c", "z": "0000001e04081e0000", "{": "040808100808040000", "|": "000808080808080800", "}": "100808040808100000", "~": "00000a140000000000", "à": "0010080e12120e0000", "è": "0010080c16180e0000", "é": "0004080c16180e0000", "ì": "0010081808081c0000", "ò": "0010080c12120c0000", "ù": "0010081212120e0000", "À": "100814223e22220000", "È": "101e101c10101e0000", "É": "041e101c10101e0000", "Ò": "101c222222221c0000", "Ù": "1012121212120c0000", "Ì": "101c080808081c0000", "█": "003e003e003e003e3e"};
+"use strict";
+// ================= DISPLAY =================
+const SW=264,SH=216,W=132,H=108,COLS=42;
+const scr=document.getElementById('scr'),sctx=scr.getContext('2d');
+const glowC=document.getElementById('glow'),gctx=glowC.getContext('2d');
+const noiseC=document.getElementById('noise'),nctx=noiseC.getContext('2d');
+const crt=document.getElementById('crt'),inp=document.getElementById('inp');
+const IMGD=sctx.createImageData(SW,SH),BUF=new Uint32Array(IMGD.data.buffer);
+function rgb(h){const n=parseInt(h.slice(1),16);return (255<<24)|((n&255)<<16)|(((n>>8)&255)<<8)|(n>>16)}
+const PAL=['#020807','#062320','#0d3e39','#17645b','#2d9488','#5fcfc0','#b9fff4'].map(rgb);
+const C_TXT=rgb('#9cf7ea'),C_DIM=rgb('#3f8f86'),C_HI=rgb('#e2fffb'),C_DARK=rgb('#031210'),C_ROLL=rgb('#c8fff6');
+const BAYER=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5].map(v=>(v+.5)/16);
+const GL={};for(const k in FONT){const s=FONT[k],a=[];for(let i=0;i<18;i+=2)a.push(parseInt(s.substr(i,2),16));GL[k]=a}
+function san(s){return s.replace(/[’‘`]/g,"'").replace(/[“”«»]/g,'"').replace(/[—–]/g,'-').replace(/…/g,'...').replace(/°/g,'o')}
+function glyph(ch){return GL[ch]||GL['?']}
+function dstr(x,y,s,col,jit){for(let i=0;i<s.length;i++){const g=glyph(s[i]);const yy=y+(jit?((i*7+s.charCodeAt(i))%3)-1:0);for(let r=0;r<9;r++){const row=g[r];if(!row)continue;for(let b=0;b<6;b++)if(row&(32>>b)){const X=x+i*6+b,Y=yy+r;if(X>=0&&Y>=0&&X<SW&&Y<SH)BUF[Y*SW+X]=col}}}}
+function fit(){const vv=window.visualViewport;const vw=vv?vv.width:innerWidth,vh=vv?vv.height:innerHeight;
+ let s=Math.min((vw-12)/SW,(vh-16)/SH);s=Math.max(1,s);const w=Math.floor(SW*s),h=Math.floor(SH*s);
+ crt.style.width=w+'px';crt.style.height=h+'px';const ph=Math.max(2,h/SH);
+ crt.querySelector('.scan').style.setProperty('--h1',(ph*.55).toFixed(2)+'px');crt.querySelector('.scan').style.setProperty('--h2',ph.toFixed(2)+'px')}
+addEventListener('resize',fit);if(window.visualViewport)visualViewport.addEventListener('resize',fit);fit();
+
+// ================= PIXEL LIB =================
+const L=new Float32Array(W*H);const SET=0,MAX=1,ADD=2,MUL=3,MIN=4;
+function px(x,y,v,m){x=x|0;y=y|0;if(x<0||y<0||x>=W||y>=H)return;const i=y*W+x;
+ if(!m)L[i]=v;else if(m===1){if(v>L[i])L[i]=v}else if(m===2)L[i]+=v;else if(m===3)L[i]*=v;else if(v<L[i])L[i]=v}
+function fill(v){L.fill(v)}
+function vg(y0,y1,a,b,x0=0,x1=W){for(let y=y0;y<y1;y++){const v=a+(b-a)*(y-y0)/Math.max(1,y1-y0-1);for(let x=x0;x<x1;x++)px(x,y,v)}}
+function rect(x,y,w,h,v,m){for(let j=0;j<h;j++)for(let i=0;i<w;i++)px(x+i,y+j,v,m)}
+function frame(x,y,w,h,v,m){for(let i=0;i<w;i++){px(x+i,y,v,m);px(x+i,y+h-1,v,m)}for(let j=1;j<h-1;j++){px(x,y+j,v,m);px(x+w-1,y+j,v,m)}}
+function ell(cx,cy,rx,ry,v,m){for(let y=Math.floor(cy-ry);y<=cy+ry;y++)for(let x=Math.floor(cx-rx);x<=cx+rx;x++){if(((x+.5-cx)/rx)**2+((y+.5-cy)/ry)**2<=1)px(x,y,v,m)}}
+function disc(cx,cy,r,v,m){ell(cx,cy,r,r,v,m)}
+function poly(p,v,m){let a=1e9,b=-1e9;const n=p.length/2;for(let i=1;i<p.length;i+=2){a=Math.min(a,p[i]);b=Math.max(b,p[i])}
+ for(let y=Math.floor(a);y<=b;y++){const yc=y+.5,xs=[];for(let i=0;i<n;i++){const x1=p[i*2],y1=p[i*2+1],x2=p[((i+1)%n)*2],y2=p[((i+1)%n)*2+1];if((y1<=yc&&y2>yc)||(y2<=yc&&y1>yc))xs.push(x1+(yc-y1)/(y2-y1)*(x2-x1))}
+  xs.sort((q,r)=>q-r);for(let k=0;k+1<xs.length;k+=2)for(let x=Math.round(xs[k]);x<Math.round(xs[k+1]);x++)px(x,y,v,m)}}
+function line(x0,y0,x1,y1,v,m){const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0),1);for(let i=0;i<=n;i++)px(Math.round(x0+(x1-x0)*i/n),Math.round(y0+(y1-y0)*i/n),v,m)}
+function tline(x0,y0,x1,y1,w,v,m){const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0),1);for(let i=0;i<=n;i++)disc(x0+(x1-x0)*i/n,y0+(y1-y0)*i/n,w/2,v,m)}
+function glow(cx,cy,r,a){for(let y=Math.floor(cy-r);y<=cy+r;y++)for(let x=Math.floor(cx-r);x<=cx+r;x++){const d=Math.hypot(x-cx,y-cy)/r;if(d<1)px(x,y,a*(1-d)*(1-d),ADD)}}
+function cone(x,y,w0,w1,h,a){for(let j=0;j<h;j++){const f=j/h,w=w0+(w1-w0)*f,c=x;for(let i=-w;i<=w;i++){const e=1-Math.abs(i)/w;px(c+i,y+j,a*(1-f*.5)*Math.min(1,e*2),ADD)}}}
+function h2(x,y){let n=(x*374761393+y*668265263)|0;n=Math.imul(n^(n>>>13),1274126177);return((n^(n>>>16))>>>0)/4294967296}
+function vn(x,y){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);const a=h2(xi,yi),b=h2(xi+1,yi),c=h2(xi,yi+1),d=h2(xi+1,yi+1);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
+function fbm(x,y){return vn(x,y)*.55+vn(x*2.1+5,y*2.1)*.3+vn(x*4.3,y*4.3+9)*.15}
+function fog(t,y0,y1,a,sc=16,sp=3){for(let y=Math.max(0,y0);y<y1;y++){const e=Math.sin(Math.PI*(y-y0)/(y1-y0));for(let x=0;x<W;x++){const n=fbm((x+t*sp)/sc,y/(sc*.5)+t*.04);const f=Math.max(0,(n-.4)*2.4);px(x,y,a*f*e,ADD)}}}
+function tex(x0,y0,w,h,a,sc=3,sd=1){for(let y=y0;y<y0+h;y++)for(let x=x0;x<x0+w;x++)px(x,y,(vn(x/sc+sd*13,y/sc)-.5)*a,ADD)}
+function rng(s){return function(){s=(s+0x6D2B79F5)|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function rain(t,a=.3,n=55){const r=rng(7);for(let i=0;i<n;i++){const x0=r()*W*1.3,sp=55+r()*30,y=((r()*130+t*sp)%(H+10))-10;let x=(x0-y*.3)%W;if(x<0)x+=W;line(x,y,x-1,y+3,a,ADD)}}
+function sparkle(x,y,t,ph=0,a=1){const k=(Math.sin(t*6+ph)+1)/2;px(x,y,.6+.4*k*a,MAX);if(k>.6){px(x-1,y,.5*a,MAX);px(x+1,y,.5*a,MAX);px(x,y-1,.5*a,MAX);px(x,y+1,.5*a,MAX)}if(k>.9){px(x-2,y,.35*a,MAX);px(x+2,y,.35*a,MAX)}}
+function ltxt(s,x,y,v,sc=1,sk=0,m){for(let i=0;i<s.length;i++){const g=glyph(s[i]);for(let r=0;r<9;r++)for(let b=0;b<6;b++)if(g[r]&(32>>b))for(let j=0;j<sc;j++)for(let k=0;k<sc;k++){const yy=r*sc+j;px(x+(i*6+b)*sc+k-Math.round(sk*yy),y+yy,typeof v==='function'?v(yy):v,m)}}}
+// --- figures (x centre, yb feet, h height)
+function man(x,yb,h,v=0,o={}){const u=h/40,hy=yb-h+3.2*u+(o.hat?1.3*u:0);
+ if(!o.sit){rect(x-4.4*u,yb-18*u,3.8*u,18*u,v);rect(x+.6*u,yb-18*u,3.8*u,18*u,v)}
+ poly([x-(o.big?9:7)*u,yb-32*u,x+(o.big?9:7)*u,yb-32*u,x+6*u,yb-(o.sit?6:16)*u,x-6*u,yb-(o.sit?6:16)*u],v);
+ ell(x-(o.big?8:6.5)*u,yb-30*u,2.4*u,2.4*u,v);ell(x+(o.big?8:6.5)*u,yb-30*u,2.4*u,2.4*u,v);
+ if(o.arm==='up')tline(x+6*u,yb-30*u,x+11*u,yb-42*u,2.2*u,v);else if(o.arm==='point')tline(x+6*u,yb-30*u,x+16*u,yb-36*u,2.2*u,v);
+ else{const sw=o.big?8.4:6.8;tline(x-sw*u,yb-30*u,x-(sw+1.4)*u,yb-17*u,2.6*u,v);tline(x+sw*u,yb-30*u,x+(sw+1.4)*u,yb-17*u,2.6*u,v)}
+ rect(x-1.5*u,yb-34*u,3*u,3*u,v);ell(x,hy,3.1*u,3.6*u,v);
+ if(o.hat){rect(x-5.6*u,hy-2.2*u,11.2*u,Math.max(1,1.1*u),v);rect(x-3.4*u,hy-5.4*u,6.8*u,3.4*u,v)}}
+function woman(x,yb,h,v=0,o={}){const u=h/40,hy=yb-h+3.5*u;
+ if(!o.sit){rect(x-3*u,yb-12*u,2*u,12*u,v);rect(x+1*u,yb-12*u,2*u,12*u,v)}
+ poly([x-3.5*u,yb-24*u,x+3.5*u,yb-24*u,x+(o.long?9:7.5)*u,yb-(o.long?1:11)*u,x-(o.long?9:7.5)*u,yb-(o.long?1:11)*u],v);
+ poly([x-5*u,yb-32*u,x+5*u,yb-32*u,x+3.5*u,yb-23*u,x-3.5*u,yb-23*u],v);
+ if(o.arm==='up')tline(x+4.5*u,yb-31*u,x+9*u,yb-41*u,1.8*u,v);else if(o.arm==='face'){tline(x-4.5*u,yb-31*u,x-1*u,yb-36*u,1.8*u,v);tline(x+4.5*u,yb-31*u,x+1*u,yb-36*u,1.8*u,v)}
+ else if(o.arm!=='none'){rect(x-6.6*u,yb-31*u,2*u,11*u,v);rect(x+4.6*u,yb-31*u,2*u,11*u,v)}
+ rect(x-1*u,yb-34*u,2*u,3*u,v);ell(x,hy,2.9*u,3.4*u,v);ell(x,hy-.6*u,3.8*u,3.3*u,v);
+ if(o.hat){ell(x,hy-2.6*u,4.8*u,1.6*u,v)}if(o.bun)disc(x,hy-4.5*u,1.8*u,v)}
+function bldg(x,y,w,h,v,lit=.25,sd=1,t=0){rect(x,y,w,h,v);const r=rng(sd);for(let wy=y+3;wy<y+h-3;wy+=6)for(let wx=x+2;wx<x+w-3;wx+=5){const on=r()<lit;const fl=on&&r()<.08?(Math.sin(t*2+wx)>0?1:.6):1;rect(wx,wy,2,3,on?(.45+r()*.3)*fl:Math.max(0,v-.03),SET)}}
+function fireEsc(x,y,h,v){for(let j=0;j<h;j+=8){rect(x,y+j,12,1,v);line(x+1,y+j,x+11,y+j+8,v)}}
+function moon(cx,cy,r,a=.6,t=0){glow(cx,cy,r*2.2,a*.35);for(let y=Math.floor(cy-r);y<=cy+r;y++)for(let x=Math.floor(cx-r);x<=cx+r;x++){const dx=(x+.5-cx)/r,dy=(y+.5-cy)/r,d=dx*dx+dy*dy;if(d<=1){const n=fbm(x/5+3,y/5);px(x,y,a*(.55+.6*n)*(1-.35*d)*(.7+.3*Math.max(0,dx+.3)),SET)}}}
+function wtower(x,yb,v){line(x-6,yb,x-5,yb-12,v);line(x+6,yb,x+5,yb-12,v);line(x-5,yb-6,x+5,yb-6,v);rect(x-8,yb-26,16,14,v);poly([x-9,yb-26,x+9,yb-26,x,yb-33],v)}
+function rim(v){const C=L.slice();for(let y=1;y<64;y++)for(let x=1;x<W-1;x++){const i=y*W+x;if(C[i]<.05&&(C[i+1]>.2||C[i-1]>.2||C[i-W]>.2))px(x,y,v)}}
+function stars(t,n=40,y1=50,sd=3){const r=rng(sd);for(let i=0;i<n;i++){const x=r()*W,y=r()*y1,k=r();px(x,y,.15+.25*((Math.sin(t*2+k*40)+1)/2),MAX)}}
+
+// ================= IMAGES =================
+const IMG={};
+IMG.title={nodark:1,d(t){fill(.01);stars(t,60,70);moon(104,40,36,.62,t);
+ const sk=[0,72,8,70,8,62,16,62,16,58,26,58,26,66,36,66,36,54,40,50,44,54,44,64,58,64,58,60,70,60,70,68,84,68,84,58,92,58,92,64,104,64,104,56,112,56,112,66,124,66,124,60,132,60,132,108,0,108];
+ poly(sk,.015);wtower(21,58,.015);const r=rng(5);for(let i=0;i<14;i++){const x=r()*130|0,y=62+r()*16|0;if(L[y*W+x]<.05)rect(x,y,1,2,.4)}
+ fog(t,44,96,.45,18,3);
+ ltxt('La',14,16,.75,1,.2);
+ ltxt('NEBBIA',9,27,.0,2,.28);ltxt('NEBBIA',8,26,y=>.98-y*.022,2,.28);
+ ltxt('ULULANTE',33,47,.0,1,.25);ltxt('ULULANTE',32,46,.88,1,.25)},
+ ov(){const a=[{x:6,y:6,s:"adattamento da 'La Nebbia Ululante'",c:C_DIM},{x:6,y:16,s:'Cthulhu Confidential - Ruth Tillman',c:C_DIM}];return a}};
+IMG.strada={d(t){vg(0,64,.05,.13);bldg(0,0,32,64,.07,.3,2,t);bldg(100,0,32,64,.06,.25,3,t);bldg(32,0,68,26,.09,.35,4,t);fireEsc(4,6,48,.0);
+ rect(34,22,64,42,.05);const on=(Math.sin(t*13)+Math.sin(t*3.7)+Math.sin(t*.9))>-1.9?1:.25;
+ rect(38,24,56,13,.02);ltxt('FANTASIA',42,26,.55+.4*on);glow(66,30,34,.22*on);
+ poly([32,38,100,38,106,47,26,47],.2);for(let x=30;x<104;x+=6)line(x,38,x-2+((x-66)*.1),47,.12);
+ rect(57,47,18,17,.28);glow(66,56,16,.3);
+ line(16,16,16,64,.0);rect(13,15,7,2,.0);cone(16,17,1,9,30,.12);glow(16,17,8,.5);
+ woman(52,63,22,0);woman(79,63,21,0,{hat:1});man(112,63,24,.0,{hat:1});
+ for(let y=62;y<76;y++)for(let x=0;x<W;x++){const sy=124-y+Math.round(Math.sin(y*1.7+t*3+x*.2)),i=sy*W+x;if(sy>=0&&sy<62)px(x,y,L[i]*.45,SET)}
+ rain(t,.3)}};
+function dressing(t){vg(0,64,.13,.08);for(let x=0;x<W;x+=6)line(x,0,x,64,.15);
+ rect(32,6,68,42,.2);rect(35,9,62,36,.3);tex(35,9,62,36,.08,4);
+ const r=rng(9);for(let i=0;i<12;i++){const bx=33+i*6,f=(i===5&&Math.sin(t*9)>.3)?.3:1;disc(bx,6,1.4,.95*f);glow(bx,6,5,.2*f)}
+ for(let j=1;j<7;j++){disc(32,6+j*6,1.4,.9);disc(100,6+j*6,1.4,.9)}
+ rect(26,46,80,4,.22);rect(40,42,3,4,.55);rect(46,43,2,3,.7);rect(86,42,4,4,.4);}
+IMG.camerino={d(t){dressing(t);woman(66,44,22,.17,{arm:'face'});woman(66,64,34,.02,{arm:'face'});woman(14,64,36,.03);woman(28,64,34,.04,{hat:1});
+ rect(108,4,22,60,.32);glow(118,30,18,.2);man(119,64,42,.0,{});fog(t,0,40,.08,10,1)}};
+IMG.nora_pianto={d(t){dressing(t);rect(56,48,20,16,.1);woman(66,62,26,0,{sit:1,arm:'face'});woman(48,64,34,.03);woman(86,64,33,.04,{bun:1});fog(t,0,40,.08,10,1)}};
+IMG.sala={d(t){vg(0,64,.06,.11);fog(t,6,50,.16,12,2);
+ rect(88,0,44,30,.12);for(let x=88;x<132;x++)px(x,0,0);for(let x=88;x<132;x+=3)line(x,0,x,30,.07+.05*Math.sin(x));rect(86,30,46,6,.24);
+ cone(110,0,2,16,30,.16);woman(110,30,22,0,{long:1});line(103,16,103,30,0);disc(103,15,1.2,.2);
+ glow(62,4,16,.3);const r=rng(4);for(let i=0;i<14;i++){const x=54+r()*16,y=2+r()*7;sparkle(x|0,y|0,t,i*1.7,.7)}
+ rect(0,18,14,46,.17);for(let y=18;y<64;y+=3)line(0,y,14,y,.12);
+ man(56,61,32,0,{arm:'up'});woman(63,61,30,0,{arm:'up'});
+ ell(20,60,12,3,.18);glow(20,55,7,.35);rect(19,55,2,4,.5);ell(118,62,12,3,.18);glow(118,57,7,.3)}};
+IMG.marty={d(t){vg(0,64,.08,.16);glow(66,24,46,.35);const r=rng(8);for(let i=0;i<9;i++)glow(r()*W,r()*40,4+r()*5,.12+.06*Math.sin(t+i));
+ poly([12,66,120,66,104,46,28,46],.02);ell(66,28,14,17,.02);rect(60,40,12,8,.02);poly([52,14,72,11,70,20,60,18,56,26],.1);
+ rim(.42);
+ poly([56,46,76,46,66,60],.16);ell(94,52,8,5,.09);disc(91,49,1.6,.95);sparkle(91,49,t,0);sparkle(93,47,t,2,.6)}};
+IMG.scale={d(t){fill(.03);for(let i=0;i<10;i++){const x=8+i*10,y=60-i*5;rect(x,y,12,5,.1);line(x,y,x+12,y,.24)}
+ line(10,48,104,0,.2);for(let i=0;i<10;i++)line(14+i*10,46-i*5,14+i*10,56-i*5,.12);
+ rect(100,0,24,12,.05);line(100,12,124,12,.75);glow(112,13,12,.25);woman(44,50,24,0);fog(t,0,64,.06,9,1)}};
+IMG.ufficio={d(t){vg(0,64,.1,.07);rect(6,6,30,26,.06);for(let y=7;y<31;y+=3)rect(7,y,28,1,.45);
+ rect(110,8,20,54,.15);line(120,9,120,61,.05);px(118,34,.6);
+ rect(28,40,70,5,.2);rect(31,45,4,17,.1);rect(91,45,4,17,.1);
+ poly([50,25,64,25,68,31,46,31],.32);line(57,31,57,40,.2);cone(57,31,4,22,10,.2);glow(57,36,18,.25);
+ rect(58,37,20,3,.8);line(68,37,68,39,.3);rect(36,38,12,2,.6);ell(86,39,4,1.5,.5);
+ rect(98,26,10,30,.12);poly([97,26,109,26,107,38,99,38],.38)}};
+IMG.biglietti={d(t){vg(0,64,.14,.1);tex(0,0,W,64,.1,6,3);for(let y=0;y<64;y+=5)line(0,y,W,y+2,.08);
+ rect(6,4,56,30,.82);tex(6,4,56,30,.08,2);rect(68,8,60,26,.8);tex(68,8,60,26,.08,2,4);rect(26,38,64,24,.84);tex(26,38,64,24,.08,2,6)},
+ ov(){const a=[];const n1=["HARLEM E' DEGLI","IRLANDESI.","USCITE O VI","FAREMO USCIRE."];n1.forEach((s,i)=>a.push({x:16,y:14+i*11,s,c:C_DARK,j:1}));
+ ["NESSUNO E' FUORI","DALLA NOSTRA","PORTATA."].forEach((s,i)=>a.push({x:142,y:22+i*11,s,c:C_DARK,j:1}));
+ ["ABBIAMO ELIMINATO","MAD DOG. ORA","TOCCA A VOI."].forEach((s,i)=>a.push({x:58,y:82+i*11,s,c:C_DARK,j:1}));return a}};
+IMG.soldi={d(t){fill(.05);rect(24,2,84,60,.17);rect(28,5,76,55,.03);line(28,9,104,9,.5);
+ for(let i=0;i<6;i++){const x=38+i*11;line(x,9,x-4,13,.45);line(x,9,x+4,13,.45);poly([x-5,13,x+5,13,x+5,34,x-5,34],.42);poly([x-5,13,x-8,24,x-6,25,x-4,16],.36);poly([x+5,13,x+8,24,x+6,25,x+4,16],.36);px(x,14,.1);px(x,15,.1);line(x,16,x,33,.3)}
+ rect(30,38,72,20,.01);poly([102,38,110,34,110,62,102,58],.22);const r=rng(13);
+ for(let j=0;j<3;j++)for(let i=0;i<6;i++){const bx=34+i*11+(r()*2|0),by=41+j*5+(r()*2|0);rect(bx,by,9,4,.5);line(bx,by,bx+8,by,.72);rect(bx+4,by,1,4,.18)}
+ sparkle(70,42,t,1);sparkle(48,51,t,3,.7);glow(66,48,22,.12)}};
+IMG.delaney={d(t){vg(0,64,.03,.08);bldg(0,0,40,64,.06,.2,11,t);bldg(104,0,28,64,.05,.15,12,t);rect(40,0,64,30,.04);
+ line(80,12,80,64,0);rect(77,11,7,2,0);glow(80,13,26,.45);cone(80,14,2,22,48,.13);ell(80,62,24,3,.3,ADD);
+ man(86,62,30,0,{hat:1});poly([86,62,124,66,124,68,86,63],.0);woman(18,72,48,0);fog(t,36,64,.25,14,2)}};
+IMG.corpo={d(t){vg(0,64,.08,.13);rect(0,0,52,26,.05);poly([0,22,56,22,60,29,0,29],.2);
+ line(104,10,104,64,0);glow(104,11,22,.5);cone(104,12,2,26,50,.16);
+ for(let i=0;i<9;i++){const x=10+i*13,h=22+(i*7)%6;(i%3===1?woman:man)(x,50,h,.03,{hat:i%2})}
+ rect(0,50,W,14,.17);ell(62,57,18,3,.0);disc(83,56,3,.0);px(81,56,.17);
+ const r=rng(2);for(let i=0;i<10;i++)sparkle((44+r()*44)|0,(54+r()*6)|0,t,i*2,.5);
+ man(30,64,30,0,{});woman(96,64,28,.02,{arm:'face'})}};
+IMG.riley={d(t){vg(0,64,.03,.1);bldg(70,8,62,56,.07,.3,21,t);bldg(0,20,40,44,.06,.2,22,t);rect(70,6,62,3,.1);
+ const f=(Math.sin(t*9)+Math.sin(t*4.3))>.7?1:(Math.sin(t*2.3)>.8?.5:0);glow(96,4,14,.6*f);sparkle(96,4,t,0,f);sparkle(102,5,t,1.5,f*.7);
+ man(40,62,26,0,{arm:'point'});man(16,62,30,.03,{hat:1});man(26,62,31,.03,{});fog(t,0,30,.12,10,2)}};
+IMG.mappa={d(t){fill(.03);for(let y=2;y<62;y+=5)line(0,y,104,y,.09);for(const x of[8,20,32,44,56,68])line(x,0,x,64,.17);
+ for(let y=0;y<64;y+=2)px(80,y,.35);line(81,0,81,64,.12);
+ for(let y=0;y<64;y++)for(let x=104;x<W;x++){if(x>104+Math.sin(y*.15)*3)px(x,y,.14+.05*Math.sin(x*.7+y*.3+t*2))}
+ rect(0,0,14,10,.1);for(const p of mapMarks()){const b=p.vis?.35:.9*((Math.sin(t*5+p.x)>0)?1:.45);line(p.x-2,p.y,p.x+2,p.y,b,MAX);line(p.x,p.y-2,p.x,p.y+2,b,MAX);glow(p.x,p.y,5,p.vis?.05:.2)}},
+ ov(){return[{x:6,y:4,s:'HARLEM 1934',c:C_DIM},{x:SW-6-dayLabel().length*6,y:4,s:dayLabel(),c:C_TXT}].concat(mapMarks().map(p=>({x:p.x*2+6,y:p.y*2-4,s:p.lab,c:p.vis?C_DIM:C_TXT})))}};
+IMG.lab={d(t){vg(0,64,.1,.07);for(const y of[12,26])rect(0,y,W,2,.22);const r=rng(31);
+ for(let i=0;i<14;i++){const x=4+i*9,y=i%2?12:26,h=4+r()*5|0;rect(x,y-h,4,h,.35+r()*.3);glow(x+2,y-h/2,5,.08)}
+ poly([14,62,30,62,26,54,24,40,28,36,20,32,18,36,22,40,20,54],.02);
+ poly([56,36,64,36,70,50,50,50],.4);for(let i=0;i<4;i++){const y=48-((t*12+i*5)%14);px(58+(i*3)%8,y,.85)}glow(60,46,14,.25);
+ woman(96,62,36,0,{bun:1});rect(40,50,60,3,.25)}};
+IMG.polizia={d(t){vg(0,64,.1,.08);rect(64,4,56,36,.05);for(let y=5;y<39;y+=3)rect(65,y,54,2,.42+.05*Math.sin(y));
+ man(70,62,42,0,{hat:1});rect(4,44,124,6,.2);rect(10,36,14,8,.55);rect(12,32,12,4,.6);rect(98,38,10,6,.1);
+ glow(20,30,16,.2);for(let i=0;i<14;i++){const y=34-i*2,x=82+Math.sin(t*1.5+i*.6)*(1+i*.25);px(x,y,.45-i*.025,MAX)}disc(81,35,.8,.95)}};
+IMG.nora_casa={d(t){vg(0,64,.1,.07);tex(0,0,W,64,.06,3,8);rect(92,6,30,40,.42);line(107,6,107,46,.15);line(92,26,122,26,.15);
+ poly([88,4,94,4,96,50,86,50],.16);poly([120,4,126,4,128,50,118,50],.16);
+ rect(4,28,40,32,.13);rect(6,38,36,3,.65);for(let x=8;x<42;x+=4)rect(x,38,2,2,.08);rect(12,22,16,6,.75);
+ poly([58,30,70,24,70,36],.35);rect(56,36,14,8,.2);woman(98,62,36,0);disc(103,35,.8,.95);glow(103,35,3,.2)}};
+IMG.cleopatra={d(t){vg(0,64,.09,.06);for(const x of[2,118])for(let y=0;y<64;y+=4){rect(x,y,12,2,.26);rect(x,y+2,12,2,.12)}
+ ell(66,12,12,5,.4);disc(66,12,3,.06);line(54,12,48,18,.4);line(70,16,72,22,.4);
+ poly([22,30,34,14,46,30],.18);poly([86,30,98,14,110,30],.18);
+ glow(40,4,10,.25);glow(92,4,10,.25);woman(66,44,24,.03,{});rect(18,44,96,6,.3);line(18,44,114,44,.6);
+ man(30,64,30,0,{hat:1});man(104,64,31,0,{hat:1});for(const x of[48,84]){line(x,50,x,64,.2);rect(x-3,50,7,1,.3)}}};
+IMG.obitorio={d(t){fill(.08);for(let j=0;j<4;j++)for(let i=0;i<6;i++){frame(4+i*21,2+j*11,19,10,.24);rect(12+i*21,6+j*11,4,1,.5)}
+ poly([34,40,96,40,110,60,20,60],.3);ell(64,48,26,5,.66);disc(40,46,4,.66);
+ const sx=66+Math.sin(t*1.3)*6;line(66,0,sx,8,.3);poly([sx-4,8,sx+4,8,sx+6,11,sx-6,11],.35);cone(sx,11,3,30,40,.12);
+ man(116,62,38,0,{});fog(t,40,64,.08,8,1)}};
+function mirrors(t,who){fill(.03);for(let k=0;k<7;k++){const x=8+k*7,y=3+k*4,w=W-16-k*14,h=58-k*8;rect(x,y,w,h,.05+k*.012);frame(x,y,w,h,k%2?.18:.38)}
+ rect(36,18,60,3,.3);for(const x of[42,54,78])rect(x,12,6,6,.55);
+ if(who){for(let k=6;k>=1;k--){const s=1-k*.13;woman(66+(k%2?-1:1)*k*5,58-k*4,30*s,.04+k*.02,{sit:1})}
+  poly([50,62,82,62,80,40,52,40],.08);woman(66,58,30,0,{sit:1});sparkle(72,46,t,0);sparkle(73,45,t,1.3,.6);sparkle(74,47,t,2.4,.8)}}
+IMG.lottie={d(t){mirrors(t,1)}};
+IMG.lottie_vuoto={d(t){mirrors(t,0);rect(48,50,36,10,.12);rect(56,47,18,4,.75);glow(64,48,16,.25);fog(t,30,64,.08,9,1)}};
+IMG.tetti={d(t){vg(0,64,.2,.08);moon(108,12,8,.65);const r=rng(41);for(let i=0;i<20;i++)rect(r()*W|0,30+r()*14|0,1,1,.35);
+ rect(0,44,W,20,.08);line(0,44,W,44,.18);wtower(22,44,.03);wtower(118,40,.05);rect(70,30,6,14,.05);rect(84,34,5,10,.05);
+ rect(42,34,18,10,.06);for(let x=43;x<60;x+=2)line(x,35,x,43,.12);rect(96,40,12,6,.1);fog(t,20,64,.32,14,5)}};
+IMG.cotton_ext={d(t){vg(0,64,.05,.1);for(let i=0;i<2;i++){const a=t*.6+i*2.2,x=66+Math.sin(a)*60;for(let j=0;j<40;j++)line(66+(x-66)*j/40,62-j*1.5,66+(x-66)*j/40+1,62-j*1.5,.05,ADD)}
+ rect(10,24,112,40,.1);rect(16,8,100,18,.05);let n=0;const k=Math.floor(t*8);
+ for(let x=16;x<116;x+=4){px(x,8,(n++ +k)%3?.3:.95,MAX);px(x,25,(n+k)%3?.3:.95,MAX)}
+ ltxt('COTTON CLUB',33,12,.92);glow(66,16,40,.18);rect(56,40,20,24,.35);glow(66,50,18,.25);
+ for(let i=0;i<7;i++)(i%2?woman:man)(16+i*16,64,22+(i%3)*2,0,{hat:i%3===0});poly([0,52,8,46,26,46,32,52,32,58,0,58],.02);disc(6,58,3,.08);disc(26,58,3,.08)}};
+IMG.cotton={d(t){vg(0,64,.05,.1);poly([14,2,118,2,118,30,112,30,112,8,20,8,20,30,14,30],.2);rect(20,26,92,6,.28);
+ for(const x of[30,40,92,102]){man(x,26,15,.04,{});line(x+2,18,x+7,17,.5)}
+ cone(66,0,2,14,26,.2);woman(66,26,22,0,{long:1});fog(t,18,52,.5,10,6);
+ for(const x of[14,40,92,118]){ell(x,46,10,3,.5);man(x-4,52,12,.02,{});woman(x+4,52,11,.02,{})}
+ man(112,64,30,0,{sit:1});disc(118,47,.8,.95)}};
+IMG.madden={d(t){vg(0,64,.1,.16);glow(56,24,40,.3);glow(108,20,30,.18);const r=rng(17);for(let i=0;i<8;i++)glow(r()*W,r()*40,5,.12);
+ man(110,72,74,.02,{hat:1,big:1});poly([16,66,96,66,84,44,28,44],.03);ell(56,26,13,15,.02);ell(56,15,12,5,.02);rect(50,38,12,8,.02);rim(.4);
+ poly([48,44,64,44,56,58],.6);poly([50,46,56,49,62,46,62,50,56,48,50,50],.02);
+ line(66,34,80,32,.6);const g=.6+.4*Math.sin(t*3);disc(80,32,1,g);glow(80,32,4,.25*g);for(let i=0;i<10;i++)px(81+Math.sin(t+i*.7)*1.5,30-i*2,.3-i*.025,MAX)}};
+IMG.backstage={d(t){fill(.07);poly([0,0,44,20,44,44,0,64],.12);poly([W,0,88,20,88,44,W,64],.12);rect(44,20,44,24,.04);
+ for(const x of[8,24]){rect(x,18,10,34,.2);disc(x+5,14,1.5,.9)}for(const x of[106,116]){rect(x,18,10,34,.2);disc(x+5,14,1.5,.9)}
+ for(let i=0;i<6;i++){line(52+i*5,22,50+i*5,40,.35)}woman(34,62,30,0,{arm:'up'});woman(98,62,28,0);fog(t,0,40,.08,9,1)}};
+IMG.madden_uff={d(t){for(let x=0;x<W;x++)line(x,0,x,64,x%8<4?.12:.16);rect(26,4,80,56,.85);tex(26,4,80,56,.07,2,7);
+ ell(46,32,7,8,.05);for(let i=0;i<4;i++)rect(40+i*3.6,16,2.6,12,.05);tline(52,30,58,24,2.4,.05);
+ line(30,52,70,14,.25);rect(32,48,6,2,.25);line(70,14,72,12,.4)},
+ ov(){const a=[{x:96,y:14,s:'MADDEN',c:C_DARK,j:1}];["VATTENE","FINCHE' PUOI.","PENSI CHE MAD","DOG FOSSE","PERICOLOSO?"].forEach((s,i)=>a.push({x:130,y:32+i*11,s,c:C_DARK,j:1}));return a}};
+IMG.sotto={d(t){fill(.08);tex(0,0,W,64,.08,2,5);for(let y=0;y<64;y+=4)line(0,y,W,y,.05);
+ for(let i=0;i<6;i++)rect(4+i*4,i*5,6,2,.25);glow(8,2,12,.3);
+ const sx=70+Math.sin(t*.8)*2;line(70,0,sx,6,.3);disc(sx,7,1.5,.95);glow(sx,7,22,.3);
+ rect(84,36,40,18,.1);rect(86,38,36,3,.5);man(96,62,30,0,{sit:1});man(48,62,34,0,{});line(54,30,64,30,.6);sparkle(64,30,t,0,.8);
+ woman(20,62,26,.02,{sit:1});man(30,62,28,.02,{sit:1});fog(t,0,50,.3,8,1.5)}};
+IMG.nino={d(t){vg(0,64,.06,.12);moon(119,14,8,.7);
+ line(112,2,116,62,0);line(126,2,122,62,0);for(let y=6;y<60;y+=8){line(113,y,125,y+8,0);line(125,y,113,y+8,0)}rect(108,18,20,2,0);
+ poly([114,18,118,14,121,18],.0);sparkle(120,16,t,0,.8);
+ rect(0,10,108,4,.02);for(let x=4;x<108;x+=16)rect(x,14,2,48,.02);
+ const tx=((t*45)%340)-160;rect(tx,4,110,6,.05);for(let i=0;i<10;i++)rect(tx+4+i*11,5,7,3,.7);
+ rect(10,30,50,32,.12);rect(14,36,42,14,.4);rect(62,30,32,32,.1);rect(66,36,24,12,.3);fog(t,30,62,.25,8,4);
+ man(40,64,22,0,{hat:1});man(50,64,23,0,{hat:1});man(80,64,22,0,{hat:1});poly([0,64,4,56,28,56,32,64],.02)},
+ ov(){return[{x:44,y:62,s:'DROGHERIA',c:C_DARK}]}};
+IMG.torre={d(t){fill(.04);moon(84,26,24,.62);const r=rng(55);for(let i=0;i<40;i++)rect(r()*W|0,50+r()*12|0,1,1,.3+r()*.3);fog(t,40,64,.3,10,3);
+ tline(0,0,60,64,4,.0);tline(132,4,96,64,4,0);tline(20,0,132,40,3,0);rect(0,44,W,3,.0);for(let x=0;x<W;x+=8)line(x,38,x,44,0);line(0,38,W,38,0);
+ poly([64,44,64,36,68,32,72,34,76,36,78,44],0);disc(70,30,3,0);rect(66,28,6,2,0);sparkle(76,38,t,0)}};
+IMG.lottie_conf={d(t){fill(.04);moon(66,22,22,.6);fog(t,38,64,.25,10,3);rect(0,58,W,3,0);for(let x=0;x<W;x+=8)line(x,52,x,58,0);line(0,52,W,52,0);
+ tline(0,0,30,58,3,0);tline(W,0,102,58,3,0);woman(66,58,46,0,{arm:'up'});disc(76,12,2.5,.0);
+ for(let i=0;i<5;i++)sparkle(74+(i%3),14+(i>>1),t,i*1.3,.9);for(let i=0;i<6;i++)line(62,16+i,54-i*2+Math.sin(t*4+i)*2,18+i*1.4,0)}};
+IMG.segugio={nodark:0,d(t){fill(.02);fog(t,0,64,.35,9,2);tline(0,64,70,0,3,.0);tline(132,64,60,0,3,0);tline(0,20,132,30,2,.0);
+ const j=Math.sin(t*7)*1.2,p=[122,0,132,6,112,20,98,22,84,30,70,30,58,34,48,32,58,26,70,22,82,18,96,10,108,2];for(let i=0;i<p.length;i++)p[i]+=(i%2?Math.sin(t*3+i):Math.cos(t*2.6+i))*.8;
+ poly(p,.28);tex(48,0,84,36,.2,2,9);for(let i=0;i<p.length-2;i+=2)line(p[i],p[i+1],p[i+2],p[i+3],.55,MAX);
+ line(96,12,90,44,.4);line(84,22,78,48,.35);line(110,8,118,40,.35);
+ px(58+j,29,1,MAX);px(62+j,28,1,MAX);glow(60,29,5,.3);
+ let x=50,y=33;for(let i=0;i<34;i++){const nx=50-i*1.1,ny=33+Math.sin(i*.3+t*4)*4+i*.5;line(x,y,nx,ny,.85,MAX);x=nx;y=ny}}};
+IMG.fiume={d(t){vg(0,30,.08,.03);moon(66,12,7,.8);stars(t,20,26,8);for(let y=30;y<64;y++)for(let x=0;x<W;x++){const w=Math.sin(x*.4+y*.8+t*2)*.5+.5;const c=Math.max(0,1-Math.abs(x-66+Math.sin(y+t*3)*2)/(4+(y-30)*.3));px(x,y,.06+w*.04+c*.45*w)}
+ for(let k=0;k<3;k++){const rr=((t*7+k*7)%21);if(rr>1){for(let a=0;a<6.3;a+=.15)px(58+Math.cos(a)*rr,46+Math.sin(a)*rr*.3,.6*(1-rr/21),MAX)}}
+ rect(0,0,W,4,.0);tline(0,4,40,0,2,0)}};
+IMG.drogheria={d(t){vg(0,64,.07,.1);rect(4,6,50,40,.0);const tx=((t*120)%200)-100;for(let i=0;i<8;i++)rect(tx+i*14,14,10,8,.75);glow(28,20,30,.12*(Math.abs(tx-0)<80?1:0));
+ frame(4,6,50,40,.2);line(29,6,29,46,.2);line(4,26,54,26,.2);glow(90,30,14,.3);rect(86,22,8,8,.5);
+ man(72,62,34,0,{hat:1});man(98,62,36,0,{});man(120,62,34,0,{hat:1});woman(56,62,28,.03,{sit:1});rect(70,46,50,3,.22)}};
+IMG.giornale={nodark:0,d(t){fill(.82);tex(0,0,W,108,.08,2,3);rect(4,14,124,1,.1);rect(4,30,124,1,.1);
+ rect(6,34,48,26,.3);for(let y=35;y<59;y++)for(let x=7;x<53;x++)px(x,y,.2+.5*fbm(x/6,y/6));rect(12,38,36,6,.8);
+ for(let c=0;c<2;c++)for(let y=34;y<60;y+=3)rect(60+c*36,y,32-((y*7)%9),1,.35)},
+ ov(){const h=S.headline||['',''];return[{x:30,y:6,s:'IL CORRIERE DI HARLEM',c:C_DARK},{x:Math.max(6,(SW-h[0].length*6)/2|0),y:36,s:h[0],c:C_DARK},{x:Math.max(6,(SW-h[1].length*6)/2|0),y:48,s:h[1],c:C_DARK}]}};
+IMG.decap={d(t){fill(.01);fog(t,0,64,.45,8,4);let x=132,y=10;for(let i=0;i<60;i++){const nx=132-i*2,ny=10+i*.6+Math.sin(i*.25+t*3)*6;line(x,y,nx,ny,.9,MAX);x=nx;y=ny}}};
+IMG.frantumi={d(t){fill(.05);const r=rng(77);for(let i=0;i<40;i++){const cx=r()*W,cy=r()*64,s=6+r()*10,a=r()*6+t*.05*(r()-.5);poly([cx+Math.cos(a)*s,cy+Math.sin(a)*s,cx+Math.cos(a+2.1)*s,cy+Math.sin(a+2.1)*s,cx+Math.cos(a+4.2)*s,cy+Math.sin(a+4.2)*s],.08+r()*.5*((Math.sin(t*2+i)+1.4)/2.4))}
+ for(let i=0;i<12;i++)sparkle(r()*W|0,r()*62|0,t,i,.8)}};
+IMG.sanatorio={d(t){vg(0,40,.35,.15);vg(40,64,.12,.08);moon(20,10,5,.4);rect(30,10,80,46,.1);poly([26,10,70,0,114,10],.12);
+ for(let j=0;j<3;j++)for(let i=0;i<7;i++){rect(36+i*10,16+j*12,5,7,.3);line(38+i*10,16+j*12,38+i*10,22+j*12,.08)}
+ line(14,64,16,30,.03);line(16,40,8,32,.03);line(16,36,24,28,.03);woman(66,64,26,.02,{hat:1});woman(78,64,26,.02)}};
+IMG.fuga={d(t){vg(0,64,.1,.2);glow(70,40,40,.15);rect(0,6,W,3,.02);for(let x=0;x<W;x+=14)rect(x,9,2,55,.02);const tx=((t*160)%260)-130;for(let i=0;i<10;i++)rect(tx+i*12,1,9,4,.75);
+ for(let i=0;i<5;i++)line(20+i*4,40+i*3,4+i*4,40+i*3,.3);woman(48,62,32,0,{arm:'up'});fog(t,44,64,.2,10,8)}};
+IMG.taccuino={d(t){fill(.03);rect(14,4,104,58,.62);tex(14,4,104,58,.06,3,2);for(let y=12;y<62;y+=5)line(14,y,117,y,.5);line(24,4,24,62,.4);for(let x=20;x<116;x+=8)disc(x,4,1.5,.1);tline(84,10,108,50,2,.15);disc(108,51,1,.05);glow(30,20,30,.1)}};
+IMG.alba={d(t){vg(0,64,.35,.12);const r=rng(41);rect(0,44,W,20,.08);line(0,44,W,44,.18);wtower(22,44,.03);wtower(118,40,.05);rect(70,30,6,14,.05);rect(42,34,18,10,.06);glow(66,44,40,.15);fog(t,20,64,.4,14,2)}};
+
+// ================= STATE =================
+let S;
+function newState(){return{scene:'i1',f:{},cl:[],v:[],g:[],slot:0,susp:0,trauma:0,vis:{},goal:'',headline:null}}
+const has=k=>!!S.f[k],set=(k,v=1)=>{S.f[k]=v};
+const CLUE={ellie:"Ellie, la hostess sparita: 35 anni, vedova, legata a Tony.",marty:"Marty Rossi tiene i conti al piano di sopra.",cliente:"Un cliente di Ellie spia il locale.",
+ tony_ellie:"Tony rimpiange Ellie.",lucky:"Il 50% dell'incasso va a 'Lucky' Luciano.",biglietti:"Minacce 'irlandesi' nel cassetto di Marty.",
+ mafiosi:"Jimmy e Ricky, uomini di Sal, sono spariti.",ferita:"Tony: poco sangue, ferite cauterizzate, bava strana.",luci:"Riley ha visto luci lampeggiare su un tetto.",
+ ellie_minaccia:"Ellie a Nora: 'goditi Tony finché puoi'.",bracciale:"Ellie porta un braccialetto di specchi.",frenchy_watch:"Un gorilla del Cotton Club sorveglia il Fantasia.",
+ madden:"Owney Madden, Cotton Club: ha paura di qualcosa.",frenchy:"Big Frenchy DeMange, l'ombra di Madden.",fiume:"Corpo senza testa nell'East River (Bellevue).",
+ vedova:"Lottie Coll, vedova di Mad Dog, vive sulla 140a.",manonera:"Madden ha chiesto a Nora della Mano Nera.",icore:"La bava è saliva senza enzimi: nessun animale noto.",
+ icore2:"Bava del tetto e bava di Tony: identiche.",bruciatura:"Mattone bruciato accanto alla porta del tetto.",trappola:"Sul tetto del Fantasia qualcuno è stato chiuso fuori.",
+ gonna:"Una donna ha spiato il Cotton Club da un tetto.",donna_ricky:"Ricky è uscito con una ragazza del Fantasia.",vertice:"I boss si incontreranno. Dove?",
+ mickey:"Il morto è Mickey O'Malley, del Cotton Club. Rossetto sul colletto.",glint:"Un lampo sul tetto di fronte al Cotton Club.",sotto:"Gli artisti si vedono al 646 di Lenox.",
+ messaggera:"Una signora bianca paga ragazzini per minacciare Madden.",doppiogioco:"Stessa grafia nelle minacce a italiani e irlandesi.",
+ nino:"Vertice a mezzanotte: drogheria di Nino, 132a e Park.",segugio:"Diario: pietra, sigillo, Segugio. Il braccialetto lo devia.",alto:"Lottie si apposta in alto, col binocolo.",
+ bracciale_lottie:"Lottie Coll porta un braccialetto di specchi.",sospetta:"ELLIE KNUSSEN E LOTTIE COLL SONO LA STESSA DONNA."};
+function clue(k){if(S.cl.includes(k))return;S.cl.push(k);
+ if(k!=='sospetta'&&!S.cl.includes('sospetta')&&(has('ellie_lottie')||(S.cl.includes('bracciale')&&S.cl.includes('bracciale_lottie')))){S.cl.push('sospetta');out("Un brivido di certezza: Ellie Knussen e Lottie Coll sono la stessa donna.",'roll');sfx('ding')}}
+const MOD={'PASSO LEGGERO':['FURTIVITÀ',1],'FATTI FORZA':['EQUILIBRIO',1],'PEDINATRICE NOTTURNA':['PEDINARE',1],'COME UNA VERA PROFESSIONISTA':['AUTOCONTROLLO',1],'GAMBE AGGRAZIATE':['FUGA',1],
+ 'A UN METRO DA TERRA':['CAMUFFARSI',1],'EQUILIBRIO PERFETTO':['COMBATTIMENTO',1],'TUTTO TROPPO UMANO':['EQUILIBRIO',1],'RAGAZZA DEL CLEOPATRA':['AUTOCONTROLLO',1],
+ 'TONY NEI MIEI PENSIERI':['EQUILIBRIO',-1],'FORZE SOVRANNATURALI':['EQUILIBRIO',-1],'SAL È SOSPETTOSO':['CAMUFFARSI',-1],'CHI HA PRESO I MIEI SOLDI?':['AUTOCONTROLLO',-1],
+ 'DUE PIEDI SINISTRI':['FUGA',-1],'PIÙ FACILE ENTRARE CHE USCIRE':['FURTIVITÀ',-1],'DA UN ALTRA DIMENSIONE':['EQUILIBRIO',-1]};
+function vant(n){if(S.v.includes(n))return;S.v.push(n);out('+ VANTAGGIO: '+n,'roll');sfx('ding')}
+function guaio(n){if(S.g.includes(n))return;S.g.push(n);out('- GUAIO: '+n,'roll');sfx('bad')}
+function dropG(n){S.g=S.g.filter(x=>x!==n)}
+function suspect(){S.susp++;guaio('SAL È SOSPETTOSO')}
+function trauma(n){S.trauma++;guaio(n)}
+function roll(skill,mod=0,sv=5,td=3){for(const c of S.v.concat(S.g)){const m=MOD[c];if(m&&m[0]===skill)mod+=m[1]}
+ const d=1+Math.floor(Math.random()*6),tot=d+mod,res=tot>=sv?'S':tot>=td?'T':'P';
+ queue.push({t:'roll',d});out(`[${skill}] dado ${d}${mod?(mod>0?' +'+mod:' '+mod):''} = ${tot}: ${res==='S'?'SVOLTA':res==='T'?'TIENI DURO':'PASSO FALSO'}`,'roll');return res}
+const SLOTS=['MATTINA','POMERIGGIO','SERA','NOTTE','MATTINA','POMERIGGIO','SERA'];
+function dayLabel(){return S?('GIORNO '+(S.slot<4?2:3)+' - '+(SLOTS[S.slot]||'NOTTE')):''}
+const night=()=>[2,3,6].includes(S.slot);
+
+// ================= TEXT QUEUE =================
+let queue=[],page=null,waitKey=false,promptOn=false,input='',fails=0,mode='boot',showHints=false,tapZones=[];
+let curImg='title',imgT0=0,die=null,lastCmd='';
+function wrap(s){const out=[];for(const para of san(s).split('\n')){let line='';for(const w of para.split(' ')){if(!w){continue}if((line+(line?' ':'')+w).length>COLS){out.push(line);line=w}else line+=(line?' ':'')+w}out.push(line)}return out}
+function out(s,st='n'){const ls=wrap(s).map(l=>({s:l,st}));const last=queue[queue.length-1];if(last&&last.t==='text')last.lines.push(...ls);else queue.push({t:'text',lines:ls})}
+function qimg(k){queue.push({t:'img',k})}
+function qfn(f){queue.push({t:'fn',f})}
+function startPage(){page={lines:[],chars:0,shown:0}}
+let lastT=0;
+function pump(){while(true){if(die)return;if(page&&page.shown<page.chars)return;if(waitKey)return;
+ const it=queue[0];if(!it){if(mode==='play'||mode==='yn'){promptOn=true}return}
+ if(it.t==='text'){if(!page)startPage();const room=6-page.lines.length;if(room<=0){waitKey=true;return}
+  const take=it.lines.splice(0,room);page.lines.push(...take);page.chars=page.lines.reduce((a,l)=>a+l.s.length,0);if(!it.lines.length)queue.shift();continue}
+ if(it.t==='img'){if(page&&page.lines.length&&!it.nowait){waitKey=true;it.nowait=1;return}queue.shift();page=null;if(curImg!==it.k){curImg=it.k;imgT0=performance.now();sfx('static')}continue}
+ if(it.t==='roll'){queue.shift();die={t0:performance.now(),d:it.d};sfx('dice');return}
+ if(it.t==='fn'){queue.shift();it.f();continue}
+ if(it.t==='clear'){if(page&&page.lines.length){if(!it.nowait){waitKey=true;it.nowait=1;return}}queue.shift();page=null;continue}}}
+function advance(){if(page&&page.shown<page.chars){page.shown=page.chars;pump();return true}if(waitKey){waitKey=false;const it=queue[0];if(it&&it.t==='text')page=null;pump();return true}return false}
+
+// ================= PARSER =================
+function norm(s){return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9' ]/g,' ').replace(/'/g,' ').replace(/\s+/g,' ').trim()}
+function matchAct(cmd,acts){const n=norm(cmd),ws=n.split(' ');if(/^\d+$/.test(n)){const vis=acts.filter(a=>a.h);return vis[+n-1]}
+ for(const a of acts){for(const k of a.k){if(k[0]==='='){if(ws.includes(k.slice(1)))return a}else if(k.includes(' ')){if((' '+n+' ').includes(' '+k))return a}else if(ws.some(w=>w.startsWith(k)||(w.length>=4&&k.startsWith(w))))return a}}return null}
+function curActs(){const sc=SC[S.scene];return (sc.acts?sc.acts():[]).filter(a=>!a.c||a.c())}
+function hintLine(){const vis=curActs().filter(a=>a.h).map(a=>a.h);return vis.length?'Puoi: '+vis.join(', '):''}
+const GLOBAL=[{k:['aiuto','help','suggeriment','cosa posso','comandi'],f(){const h=hintLine();out(h||'Prova a GUARDARE intorno.','hint');out('Altro: GUARDA, TACCUINO, MUTO.','dim')}},
+ {k:['taccuino','indizi','inventario','carte'],f:showNotes},
+ {k:['guarda','descrivi','dove sono','intorno'],f(){describe()}},
+ {k:['muto','audio','suono','volume'],f(){muted=!muted;if(master)master.gain.value=muted?0:.5;out(muted?'Audio spento.':'Audio acceso.','dim')}},
+ {k:['ricomincia','restart','nuova partita'],f(){out('Sicura? Scrivi SI per ricominciare da capo.','dim');set('_restart')}}];
+function submit(raw){const cmd=raw.trim();if(!cmd)return;sfx('enter');promptOn=false;page=null;queue=[];out('> '+cmd,'dim');lastCmd=cmd;
+ if(has('_restart')){delete S.f._restart;if(/^s/i.test(cmd)){clearSave();toTitle();return}}
+ const acts=curActs();const nn=norm(cmd);if(!nn&&cmd.includes('?')){GLOBAL[0].f();pump();return}if(nn==='l'){describe();pump();return}
+ let a=matchAct(cmd,acts);
+ if(!a){const g=matchAct(cmd,GLOBAL);if(g){g.f();pump();return}}
+ if(a){fails=0;a.f();save()}else{fails++;const r=['Non capisco.','Viv esita. Prova qualcos\'altro.','Non sembra una buona idea.','Cosa intendi?'];out(r[(Math.random()*r.length)|0]);const h=hintLine();if(h)out(h,'hint')}
+ pump()}
+function describe(){const sc=SC[S.scene];out(typeof sc.text==='function'?sc.text():sc.text);out('Cosa fai?','dim')}
+function go(id,opt={}){S.scene=id;const sc=SC[id];qimg(typeof sc.img==='function'?sc.img():sc.img);if(sc.enter)sc.enter();if(S.scene!==id)return;
+ const tx=typeof sc.text==='function'?sc.text():sc.text;if(tx)out(tx);if(sc.after)sc.after();if(S.scene!==id)return;
+ if(sc.hub){const h=hintLine();if(h)out(h,'hint')}else if(sc.acts)out('Cosa fai?','dim');save()}
+function showNotes(){qimg('taccuino');out('TACCUINO DI VIV - '+dayLabel(),'roll');if(!S.cl.length)out('Nessun indizio, per ora.');
+ for(const k of S.cl)out('* '+CLUE[k],k==='sospetta'?'roll':'n');if(S.v.length)out('VANTAGGI: '+S.v.join(', '),'hint');if(S.g.length)out('GUAI: '+S.g.join(', '),'dim');
+ const sc=SC[S.scene];qimg(typeof sc.img==='function'?sc.img():sc.img);out('Cosa fai?','dim')}
+function A(k,h,f,c){return{k:k.split('|'),h,f,c}}
+
+// ================= ENDINGS =================
+const ENDS={1:'LA NEBBIA SI DIRADA',2:'TUTTO TROPPO UMANO',3:'IL BACIO DEL SEGUGIO',4:'DECAPITATA',5:'IL SANATORIO',6:'LA SCOMMESSA DI SAL',7:'LA STORIA PERDUTA',8:'VETRO IN FRANTUMI'};
+function found(){try{return JSON.parse(localStorage.getItem('nebbia_fin')||'[]')}catch(e){return[]}}
+function ending(n,img,txt){const f=found();if(!f.includes(n)){f.push(n);try{localStorage.setItem('nebbia_fin',JSON.stringify(f))}catch(e){}}clearSave();
+ S.scene='_end';qimg(img);out(txt);
+ if(S.v.includes('COME UNA VERA PROFESSIONISTA')&&[1,5].includes(n))out('La foto dei contanti nascosti finisce in prima pagina. Lucky Luciano non manda fiori.');
+ if(S.g.includes('CHI HA PRESO I MIEI SOLDI?'))out('Le mazzette rubate restano nella borsetta. Pesano più di qualsiasi pietra.');
+ if(has('shirley'))out('E Shirley, col suo medaglione, non torna più al Fantasia. Quel livido è colpa tua.');
+ qfn(()=>sfx(n===4||n===8?'bad':'end'));out(`FINALE N.${n}: ${ENDS[n]}`,'roll');out(`Finali scoperti: ${found().length}/8`,'dim');out('Vuoi giocare ancora?','n');out('SI, NO','hint');qfn(()=>{mode='yn'})}
+const HL={mad:['OWNEY MADDEN LASCIA','IL COTTON CLUB PER SEMPRE'],dead:['TRE ITALIANI SENZA TESTA','SULLA 132a. MADDEN FUGGE']};
+
+// ================= SCENES =================
+const SC={};
+SC.i1={img:'strada',text:()=>"Harlem, autunno 1934. Pioggia sottile sulla 132a Strada. Sei Vivian Sinclair, giornalista: lingua tagliente, guanti di pelle e, da stasera, un nome falso.\nSopra la tenda rossa sfrigola il neon del FANTASIA LOUNGE, il night degli italiani. Peaches LaFleur, diciassette anni e troppo rossetto, ti prende sottobraccio.\n'Allora, tesoro, cosa cerchi qui dentro? La MAFIA o noi RAGAZZE?'",
+ acts:()=>[A('mafia|luciano|crimin|gangster|soldi','MAFIA',()=>{S.goal='mafia';out("'La mafia, eh? Allora tieni gli occhi aperti e la bocca chiusa.' Peaches ride e ti trascina dentro.");go('i2')}),
+  A('ragazz|donne|hostess|lavoro|voi|noi','RAGAZZE',()=>{S.goal='ragazze';out("'Noi? Che onore.' Peaches si stringe a te. 'Allora vedrai come si campa.' E ti trascina dentro.");go('i2')}),
+  A('entra|segui|vai','ENTRA',()=>{S.goal='mafia';out("Peaches non aspetta la risposta.");go('i2')})]};
+SC.i2={img:'camerino',text:()=>"Dal retro, oltre la cucina, un camerino che odora di cipria e sigarette. Otto ragazze si ritoccano il rossetto sotto lampadine nude.\nSal Rossi, il padrone, calvo e paterno come un coltello a serramanico, batte le mani: 'Lavorate bene e lui vi tratterà bene. E divertitevi: si vende di più.'",
+ acts:()=>[A('ascolt|chiacchier|pettegol|ragazz|voci|lulu|dixie|parla','RAGAZZE',()=>{if(has('gossip')){out('Le ragazze tornano al rossetto. Hai già sentito il meglio.');return}set('gossip');
+   out("Lulu e Dixie abbassano la voce. Quella che hai sostituito si chiamava ELLIE: sui trentacinque, riservata. Diceva di essere vedova. Sparita di colpo. E con Tony, il marito della cantante Nora, c'era del tenero.");clue('ellie');
+   out("Marty, il figlio di Sal, fa i conti al piano di sopra: 'Ti guarderà più di una volta, vedrai.'");clue('marty');
+   out("'E occhio al cliente di Ellie: un tipo strano. È tornato a fissare dalla vetrina. Brividi.'");clue('cliente')}),
+  A('=sal|padrone|capo|rossi','SAL',()=>out("Sal ti squadra. 'Niente affari extra coi clienti. Qui si flirta, si balla, si fa bere. Le retate costano.' Ti dà un buffetto. 'Il 5% sul conto del tuo uomo.'")),
+  A('peaches','PEACHES',()=>out("Peaches ti strizza l'occhio: 'Se devi mollare un tipo, esci dalla porta nel bagno delle signore. Quella con scritto PRIVATO.'")),
+  A('sala|vai|entra|esci|lavora|balla','SALA',()=>go('sala'))]};
+SC.sala={img:'sala',text:()=>has('danced')?"Velluto rosso e fumo blu. Nora canta, i dadi rotolano dietro la tenda. Marty gioca col suo anello e la scala per il piano di sopra è incustodita."+(S.cl.includes('cliente')&&!has('delaney_met')?" Dalla vetrina, un uomo solo fissa la sala.":""):
+ "La sala è velluto rosso e fumo blu. Dietro una tenda, un piccolo casinò che nessun poliziotto sembra vedere. Sul palco canta Nora Rimes, voce calda e occhi freddi.\nSal ti spinge verso un italiano dal sorriso impomatato: Tony Romero. 'Fammi vedere di che pasta sei fatta. BALLA con Tony.'",
+ acts:()=>{const d=has('danced');return[
+  A('ball|danz|tony','BALLA',()=>{if(d){out("Tony ti ha già fatto fare il giro della pista. Ora è al bancone a sistemarsi i capelli nello specchio.");return}set('danced');const r=roll('ATLETICA');
+   if(r==='S'){out("Ti muovi come se il jazz l'avessi inventato tu. Sal fa i complimenti a Peaches.");vant('GAMBE AGGRAZIATE')}else if(r==='T')out("Dopo qualche passo Sal ferma tutto con un gesto. 'Va bene. Ma niente esibizioni.'");else{out("Pesti un piede a Tony. Due volte. Sal sospira: 'Con quel faccino ti basta ridere alle battute.'");guaio('DUE PIEDI SINISTRI')}
+   out("Tony ti sussurra all'orecchio: 'Le donne mature mi piacciono. Peccato per Ellie: voi due avreste fatto faville.' Dal palco Nora ti fulmina.");clue('tony_ellie');
+   out("Più tardi scende Marty Rossi: camicia sciatta, un anello che getta schegge di luce. I suoi occhi tornano su di te. Il piano di sopra adesso è incustodito.");qimg('marty');out('Cosa fai? (SALI, MARTY, CLIENTE...)','dim')}),
+  A('sali|sopra|scal|ufficio|piano','SALI',()=>{if(!d){out("Prima Sal vuole vederti ballare.");return}go('scale')},()=>!has('office')),
+  A('marty|flirt|adula|sorrid|anello','MARTY',()=>{if(!d){out("Marty non è ancora sceso.");return}out("Gli sorridi come se fosse l'uomo più interessante di Harlem. Marty arrossisce: 'Vuoi vedere il mio ufficio?'");set('withMarty');go('ufficio')},()=>!has('office')),
+  A('client|vetrina|uomo|fuori|segui','CLIENTE',()=>{if(!d){out("Prima Sal vuole vederti ballare.");return}go('delaney')},()=>!has('delaney_met')&&!has('delaney_fail')),
+  A('nora|cantante','NORA',()=>out("Nora finisce la canzone e sparisce dietro le quinte senza guardarti.")),
+  A('gioc|tavol|casin|dadi|roulette','TAVOLI',()=>out("Dietro la tenda: dadi, roulette, uomini di fuori città che perdono sonno e stipendio. Peaches gioca coi soldi della casa e perde con eleganza.")),
+  A('bev|drink|bar','BAR',()=>out("Il barista ti versa tè freddo in un bicchiere da whisky. Ai clienti, il whisky vero, a prezzo d'oro."))]}};
+SC.scale={img:'scale',text:()=>"Fingi di andare alla toilette e scivoli verso la scala sul retro.",
+ after(){const r=roll('FURTIVITÀ');if(r==='S'){out("Nemmeno un gradino scricchiola.");vant('PASSO LEGGERO');out("La serratura cede a due colpi di forcina.");go('ufficio')}
+  else if(r==='T'){out("Sul pianerottolo sbatti contro Marty che scende. Improvvisi un sorriso: 'Mi sono persa... ma ti ho trovato.' Lui si gonfia come un tacchino e ti fa strada.");set('withMarty');go('ufficio')}
+  else{out("Uno degli uomini di Sal esce dalla stanza PRIVATA e ti riporta giù, gentile come una tenaglia.");suspect();out("Al bancone Marty ha visto tutto e ridacchia: 'Volevi vedere l'ufficio? Te lo mostro io.'");set('withMarty');go('ufficio')}}};
+SC.ufficio={img:'ufficio',enter(){set('office')},text:()=>has('withMarty')?"Marty accende la lampada e si pavoneggia. Piatti sporchi, la cravatta di ieri sullo schienale, un tavolo pulito con una pila di elastici: qui si conta l'incasso. 'Un giorno tutto questo sarà mio.'":"L'ufficio di Marty: piatti sporchi, la cravatta di ieri sullo schienale, un tavolo pulito con una pila di elastici. Qui si conta l'incasso. Una SCRIVANIA, un ARMADIO. Accanto, una porta PRIVATA da cui filtrano voci.",
+ acts:()=>{const m=has('withMarty');return[
+  A('libro|mastro|regist|cont|scrivan','LIBRO MASTRO',()=>{out((m?"Marty te lo mostra tutto fiero. ":"")+"Il locale incassa una fortuna ogni sera. Gli uomini prendono 200 dollari a settimana, Tony 300. Di voi ragazze, nessuna traccia. Ogni domenica il 50% finisce sotto una voce sola: LUCKY. Charlie 'Lucky' Luciano.");clue('lucky')}),
+  A('cassett|appunt|bigliett|letter|fogli|minacc','CASSETTO',()=>{qimg('biglietti');out("In fondo al cassetto, tre biglietti scarabocchiati. Minacce irlandesi agli italiani. La grafia è nervosa, inclinata, con le T tagliate a metà.");clue('biglietti');
+   if(m){out("Marty ride: 'Uno scherzo di Jimmy e Ricky, due che hanno fregato mio padre. Sono spariti coi soldi.' Ci crede davvero.");clue('mafiosi')}qimg('ufficio');out('Cosa fai?','dim')}),
+  A('armadi|camicie|guardarob','ARMADIO',()=>{if(m){out("Marty si piazza davanti all'armadio: 'Lì dentro solo camicie, dolcezza.'");return}if(has('cash_done')){out("Il doppio fondo è richiuso.");return}
+   set('cash_seen');qimg('soldi');out("Camicie bianche, cravatte. Un fermo sul fianco destro: doppio fondo. Mazzette di contanti, ordinate come soldatini. Sei sola.");out('PRENDI i soldi, FOTOGRAFA o LASCIA?','dim')}),
+  A('prend|ruba|intasca','PRENDI',()=>{set('cash_done');set('money');out("Due mazzette scivolano nella borsetta. L'affitto, i debiti... Il cuore ti batte nelle orecchie.");guaio('CHI HA PRESO I MIEI SOLDI?');qimg('ufficio');out('Cosa fai?','dim')},()=>has('cash_seen')&&!has('cash_done')),
+  A('fotograf|foto|scatt|leica|macchina','FOTOGRAFA',()=>{set('cash_done');out("Conti in fretta e scatti con la Leica nascosta nella borsetta. Una foto da prima pagina.");vant('COME UNA VERA PROFESSIONISTA');qimg('ufficio');out('Cosa fai?','dim')},()=>has('cash_seen')&&!has('cash_done')),
+  A('lasci|chiud|richiud','LASCIA',()=>{set('cash_done');out("Richiudi il doppio fondo. Ogni fibra di te avrebbe voluto prenderli.");qimg('ufficio');out('Cosa fai?','dim')},()=>has('cash_seen')&&!has('cash_done')),
+  A('porta|ascolt|origli|privat|voci','ORIGLIA',()=>{if(m){out("Marty ti tiene troppo vicina per origliare.");return}if(has('eaves')){out("Silenzio, oltre la porta.");return}set('eaves');const r=roll('FURTIVITÀ',0,4,4);
+   if(r!=='P'){out("Due uomini di Sal: 'Jimmy sparito, con moglie e figli? Non è da lui.' 'E Ricky?' 'Sal nasconde qualcosa.' 'A Lucky? Non oserebbe.'");clue('mafiosi')}else out("La maniglia gira. Fai appena in tempo a nasconderti dietro l'armadio.")}),
+  A('scend|esci|torn|vai','SCENDI',()=>{out(m?"Marty ti sfiora la vita e si china verso di te... quando un urlo sale dalla strada e gela la stanza.":"Stai per scendere quando un urlo sale dalla strada.");go('corpo')})]}};
+SC.delaney={img:'delaney',enter(){if(has('delaney_met'))return},text:()=>"Fuori, sotto un lampione, un uomo solo col cappello calcato. Quando ti vede, affretta il passo.",
+ after(){const r=roll('PEDINARE',has('peaches_help')?2:0,5,2);
+  if(r==='P'){out("Svolta l'angolo e sparisce nella nebbia. Ti tocca riprovare un'altra notte.");set('delaney_fail');return}
+  if(r==='S'){out("Gli arrivi così vicina da respirargli nell'orecchio. Sobbalza e si ferma.");vant('PEDINATRICE NOTTURNA')}else out("Quando siete abbastanza lontani dal locale gli urli di fermarsi. Si ferma.");
+  set('delaney_met');out("Roger Delaney, venditore di corsetti: la faccia più dimenticabile di New York. Ellie lo ha spennato e lasciato ai buttafuori. Chiedigli di ELLIE, o di chi altro SORVEGLIA il posto.")},
+ acts:()=>[A('ellie|ragazz|donna|lei','ELLIE',()=>{out("'Ieri sera l'ho rivista. Non è entrata, ha preso una traversa. Al polso aveva un braccialetto fatto di pezzi di specchio. Luccicava come un coltello.'");clue('bracciale')},()=>has('delaney_met')),
+  A('sorvegl|altri|chi|guard|omone|gorilla','SORVEGLIA',()=>{out("'Non sono l'unico a guardare il posto. Un omone gira davanti alle finestre. Era alla sicurezza del Cotton Club: mi ha buttato fuori, una volta.'");clue('frenchy_watch')},()=>has('delaney_met')),
+  A('torn|esci|lascia|via|rientr|mappa','TORNA',()=>{if(S.slot===0&&!has('night1done')){out("Rientri dal retro, come se niente fosse.");go('sala')}else leave()})]};
+SC.corpo={img:'corpo',enter(){set('night1done')},text:()=>"Urla sul marciapiede. Il locale si svuota; gli uomini di Sal hanno la mano sotto la giacca.\nTony Romero è a terra. La testa è quasi staccata, girata di lato con un angolo impossibile, la bocca aperta in un grido muto. I piedi incrociati: ha provato a indietreggiare da qualcosa.",
+ after(){const r=roll('EQUILIBRIO',0,5,3);if(r==='S'){out("La tua mente risponde con pietà, non con orrore.");vant('FATTI FORZA')}else if(r==='T')out("Ti appoggi a un muro per un minuto. Poi respiri.");else{out("Il suo sorriso di un'ora fa si sovrappone a questo. Il mondo vacilla.");trauma('TONY NEI MIEI PENSIERI')}
+  out("Sal fa coprire il corpo con le tovaglie e lo fa portare dentro. 'Non avete visto niente.' Nora sviene. Tra la folla, un RAGAZZINO discute coi più grandi.")},
+ acts:()=>[A('esamin|corpo|sangue|feri|marciap|osserv','ESAMINA',()=>{out("Troppo poco sangue per una decapitazione. E i bordi della ferita sembrano... cauterizzati. Dove giaceva Tony, una BAVA trasparente luccica sotto il lampione.");clue('ferita')}),
+  A('raccog|campion|bava|melma|fazzolet|portacip','RACCOGLI',()=>{if(has('campione')){out("Il portacipria è già pieno.");return}set('campione');out("Raccogli la bava nel portacipria vuoto. È fredda, e non brucia. Nettie, la tua vecchia professoressa di scienze, potrebbe analizzarla.")}),
+  A('ragazz|riley|bambin|discut|piccol','RAGAZZINO',()=>{qimg('riley');out("Riley, dodici anni, giura di aver visto luci lampeggiare sul tetto di un palazzo, proprio prima delle urla. Le luci lo hanno ipnotizzato. I grandi lo prendono in giro.");clue('luci');qimg('corpo');out('Cosa fai?','dim')}),
+  A('manc|nichel|monet|centesim|dai','MANCIA',()=>{if(!S.cl.includes('luci')){out("A chi?");return}out("Gli allunghi un nichelino. Riley si illumina: 'Se vuole, signora, il tetto glielo mostro io!'");vant('RAGAZZO DEL QUARTIERE')},()=>!S.v.includes('RAGAZZO DEL QUARTIERE')),
+  A('nora|cantant|camerin','NORA',()=>{qimg('nora_pianto');out("Nel camerino Nora è isterica. 'Se Sal avesse fatto qualcosa quando sono spariti Jimmy e Ricky...' Poi, con odio: 'L'ultima volta che ho visto Ellie mi ha detto: goditi Tony finché puoi.'");clue('mafiosi');clue('ellie_minaccia');qimg('corpo');out('Cosa fai?','dim')}),
+  A('polizi|agent','POLIZIA',()=>out("Nessun agente di quartiere. Qualcuno li ha pagati per guardare altrove. Domani parlerai col tenente O'Connor.")),
+  A('casa|dorm|vai|torn|alba|esci|domani','A CASA',()=>{qimg('alba');out("Torni a casa che il cielo è grigio. Dormi tre ore.\nHai due giorni, forse meno, prima che Harlem prenda fuoco. Ogni luogo che visiti ti costa tempo: scegli bene.");go('mappa')})]};
+// ---------- HUB
+const PLACES=[{id:'polizia',lab:'POLIZIA',x:24,y:46,c:()=>true},{id:'nora_casa',lab:'NORA',x:72,y:40,c:()=>true},{id:'lab',lab:'NETTIE',x:6,y:56,c:()=>has('campione')||has('campione2')},
+ {id:'tetti',lab:'TETTI',x:48,y:28,c:()=>S.cl.includes('luci')||S.cl.includes('glint')},{id:'cleopatra',lab:'CLEOPATRA',x:30,y:36,c:()=>S.cl.includes('mafiosi')},
+ {id:'obitorio',lab:'OBITORIO',x:118,y:58,c:()=>S.cl.includes('fiume')},{id:'irruzione',lab:'CASA COLL',x:22,y:22,c:()=>S.cl.includes('sospetta')&&!has('irrotto')},{id:'lottie',lab:'LOTTIE',x:28,y:20,c:()=>S.cl.includes('vedova')},
+ {id:'cotton',lab:'COTTON CLUB',x:44,y:12,c:()=>S.cl.includes('madden'),n:1},{id:'sotto',lab:'646 LENOX',x:58,y:16,c:()=>S.cl.includes('sotto'),n:1},
+ {id:'delaney',lab:'CLIENTE',x:40,y:30,c:()=>S.cl.includes('cliente')&&!has('delaney_met'),n:1},{id:'fantasia',lab:'FANTASIA',x:40,y:32,c:()=>!has('fired')&&[2,6].includes(S.slot)},
+ {id:'nino',lab:'NINO',x:84,y:34,c:()=>S.cl.includes('nino')}];
+function mapMarks(){if(!S)return[];return PLACES.filter(p=>p.c()&&p.id!=='irruzione').map(p=>({x:p.x,y:p.y,lab:'',vis:!!S.vis[p.id]}))}
+const KW={polizia:'polizi|oconnor|o connor|tenente|distrett',nora_casa:'nora|cantante',lab:'nettie|labor|univers|analis|campion|professor',tetti:'tett|riley',cleopatra:'cleopatra|bettola|bar|maria',
+ obitorio:'obitor|bellevue|medico|cadaver|morgue',lottie:'lottie|vedova|coll|140',cotton:'cotton|madden|club',sotto:'646|lenox|seminterr|sotto|artisti',delaney:'client|delaney',
+ fantasia:'fantasia|lounge|lavor|=sal',irruzione:'casa coll|irruz|introdu|perquis|scass',nino:'nino|droghe|vertice|132'};
+SC.mappa={img:'mappa',hub:1,text:()=>{let s=dayLabel()+'. ';s+=['La città si sveglia sotto la nebbia.','Il sole non riesce a bucare la foschia.','Le insegne si accendono una a una.','Harlem è un fiume di jazz e ombre.','Ultimo giorno. Lo senti nelle ossa.','Il tempo scivola via.','Stanotte, a mezzanotte, qualcosa accadrà.'][S.slot]||'';
+  if(S.susp===1)s+=' Ti senti osservata: Sal ti tiene d\'occhio.';return s+' Dove vai?'},
+ acts:()=>{const a=PLACES.filter(p=>p.c()).map(p=>A(KW[p.id],p.lab+(S.vis[p.id]&&p.id!=='fantasia'?'*':''),()=>visit(p)));a.push(A('taccuin|indiz','TACCUINO',showNotes));return a}};
+function visit(p){if(p.n&&!night()){out(p.id==='cotton'?"Il Cotton Club apre solo alle 22:30. Torna di SERA o di NOTTE.":"Questo si fa solo di SERA o di NOTTE.");return}
+ if(p.id==='nino'){go('nino');return}S.vis[p.id]=(S.vis[p.id]||0)+1;go(p.id)}
+function leave(){S.slot++;if(S.slot>=7){qimg('nino');out("Le 23. Il tempo è finito.");if(S.cl.includes('nino')){go('nino')}else{S.headline=HL.dead;ending(7,'giornale',"Aspetti una pista che non arriva. All'alba gli strilloni gridano la notizia: uomini di Sal trovati senza testa sotto la sopraelevata della 132a. Una guerra di mafia per le strade.\nSettimane dopo leggi che Owney Madden si è trasferito a Hot Springs, Arkansas. Lottie Coll non viene più vista. La storia più grande della tua vita, e ti è scivolata tra le dita.")}return}
+ if(S.susp>=2){capture();return}
+ if(has('money')&&S.slot===2&&!has('money_ev')){set('money_ev');go('ammanco');return}
+ go('mappa')}
+function capture(){qimg('drogheria');out("Davanti a casa ti aspettano due uomini di Sal. Un'auto scura, una mano sulla bocca. 'Il capo vuole sapere per chi lavori, bambola.'\nTi tengono chiusa fino a sera. Poi un'altra auto, una porta laterale, una scala.");go('ospite')}
+const EXIT=(f)=>A('esci|torn|mappa|via|vai|lascia|basta|fine|altrove','ESCI',f||leave);
+SC.ammanco={img:'camerino',text:()=>"Peaches ti aspetta sotto casa, pallida: 'Sal ha scoperto che mancano soldi. Stasera mette in fila tutte le ragazze. Ha promesso una punizione terribile.'",
+ acts:()=>[A('restitu|rimett|ridai','RESTITUISCI',()=>{const r=roll('FURTIVITÀ',0,4,4);dropG('CHI HA PRESO I MIEI SOLDI?');delete S.f.money;if(r!=='P')out("Rimetti le mazzette nel doppio fondo prima che apra il locale. Nessuno lo saprà mai.");else{out("Marty ti sorprende davanti all'armadio aperto.");suspect()}go('mappa')}),
+  A('shirley|incolp|accus','INCOLPA SHIRLEY',()=>{set('shirley');out("Fai notare a Sal che non sei l'unica nuova. Sal ci crede. La sera dopo Shirley ha un livido fresco e un uomo la spinge fuori dalla porta.");guaio('HAI INCASTRATO SHIRLEY');dropG('CHI HA PRESO I MIEI SOLDI?');go('mappa')}),
+  A('confess|ammett|verit','CONFESSA',()=>{out("Confessi e restituisci tutto. Sal ti guarda a lungo, poi indica la porta: 'Fuori dal mio locale. E non tornare.'");set('fired');dropG('CHI HA PRESO I MIEI SOLDI?');delete S.f.money;S.susp=0;dropG('SAL È SOSPETTOSO');go('mappa')}),
+  A('ignor|niente|tien|scapp','IGNORA',()=>{out("Non ti presenti. Al Fantasia, il tuo nome comincia a girare.");S.susp+=2;go('mappa')})]};
+SC.polizia={img:'polizia',text:()=>"Distretto di polizia. Il tenente Joseph O'Connor ti guarda da sopra una pila di verbali. 'Viv. Dimmi che non sei in un guaio.' Puoi chiedergli di MADDEN, FRENCHY, del CORPO di Tony, di MAD DOG, di LUCIANO"+(S.cl.includes('vertice')?", del VERTICE":"")+".",
+ acts:()=>[A('madden|irlandes|cotton|owney','MADDEN',()=>{out("'Owney Madden: Cotton Club, birra, pugili. Ha ucciso almeno due uomini per questioni di donne, ha fatto Sing Sing. Il Cotton Club è la cosa a cui tiene di più. Ultimamente ha rinforzato la sicurezza: ha paura di qualcosa.'");clue('madden')}),
+  A('frenchy|demange|gorilla','FRENCHY',()=>{out("'Big Frenchy DeMange. Non è irlandese, ma è fedele a Madden come un cane. Mad Dog Coll lo rapì una volta, e Madden pagò.'");clue('frenchy')}),
+  A('tony|corpo|morto|omicid|testa','CORPO',()=>{out("Gli descrivi Tony. O'Connor impallidisce. 'Come quello che abbiamo ripescato nell'East River. Senza testa. Uno degli uomini di Madden. Il medico legale di Bellevue tiene la bocca chiusa: prova tu.'");clue('fiume')}),
+  A('dog|mad dog|coll|vedov|lottie','MAD DOG',()=>{out("'Vincent Coll. Sicario, poi rapitore, poi cane rabbioso contro i suoi stessi capi. Madden e l'Olandese lo hanno crivellato in una drogheria, in pieno giorno. Mai provato niente. La vedova, Lottie, vive ancora qui, sulla 140a. Strana donna: ci disse chi aveva ucciso suo marito, senza paura.'");clue('vedova')}),
+  A('lucian|lucky|italian|sal|fantasia','LUCIANO',()=>out("'Lucky Luciano. Il Fantasia è roba sua: licenze comprate, poliziotti a libro paga. Sal Rossi ha avuto una denuncia nel '31, difeso dallo stesso avvocato di Luciano.'")),
+  A('vertic|incontr|riunion|boss|capi','VERTICE',()=>{out("O'Connor abbassa la voce. 'Si parla di una riunione, italiani e irlandesi, a mezzanotte di domani. I miei informatori dicono la drogheria di Nino, sulla 132a e Park. Stanne fuori, Viv.'");clue('nino')},()=>S.cl.includes('vertice')),EXIT()]};
+SC.nora_casa={img:'nora_casa',text:()=>"L'appartamento di Nora, nell'Harlem italiana: mobili di seconda mano, un pianoforte, un grammofono. Nora ha gli occhi gonfi e una sigaretta che trema. Parlale di TONY, di JIMMY e RICKY, di ELLIE, del suo LAVORO"+(S.cl.includes('bracciale')?", del BRACCIALE":"")+". O CONSOLALA.",
+ acts:()=>[A('tony|marit','TONY',()=>out("'Ci siamo sposati ragazzini. Lui italiano, io irlandese: i miei non me l'hanno mai perdonato. Tony faceva commissioni per Sal. Io non dovevo fare domande.'")),
+  A('jimmy|ricky|spariti|amici','JIMMY E RICKY',()=>{out("'Amici di Tony. Jimmy non è più tornato a casa. Ricky doveva consegnare qualcosa al Fantasia e non è mai arrivato. Tony pensava che qualcuno volesse il territorio di Sal.'");clue('mafiosi')}),
+  A('ellie','ELLIE',()=>out("'Li ho beccati di sopra, lei e Tony. Due giorni dopo Ellie è sparita. E io ho deciso di mettermi in proprio.'")),
+  A('lavor|propri|madden|cotton|cant','LAVORO',()=>{out("'Sono andata al Cotton Club, da Owney Madden in persona. Niente lavoro: là cantano solo artisti neri. Ma quando ha saputo dove lavoravo, mi ha fatto mille domande. Persino sulla Mano Nera, quella superstizione dei vecchi siciliani. Ha detto che mi avrebbe mandato un amico: il signor Frenchy DeMange.'");clue('madden');clue('manonera')}),
+  A('braccial|specch|polso','BRACCIALE',()=>out("'Quello di Ellie? Lo portava ogni sera, un affare di specchi rotti. Diceva di averlo fatto lei. Le piaceva farsi guardare.'"),()=>S.cl.includes('bracciale')),
+  A('consol|rassicur|abbracc|mano','CONSOLALA',()=>out("Le stringi la mano. Per un attimo Nora smette di essere una diva ed è solo una vedova di ventisei anni.")),EXIT()]};
+SC.lab={img:'lab',text:()=>"Il laboratorio della professoressa Annette 'Nettie' Rice: compiti da correggere, tazze di caffè, provette. 'Ancora cadaveri, Viv? Speravo in una tregua più lunga.'",
+ acts:()=>[A('analiz|campion|bava|esam|portacip|dai','ANALIZZA',()=>{out("Nettie prova un reagente dopo l'altro, borbottando. 'Organica, di sicuro. Sembra saliva. Ma non contiene enzimi digestivi. Nessun animale ha una saliva così, Viv. Nemmeno i batteri.'");clue('icore');
+   if(has('campione2')){out("'E questo campione del tetto... identico. Stessa sostanza, stessa... creatura.' Si toglie gli occhiali. 'Promettimi che starai attenta.'");clue('icore2')}}),EXIT()]};
+SC.tetti={img:'tetti',text:()=>(S.v.includes('RAGAZZO DEL QUARTIERE')?"Riley ti fa strada, fiero come un caporale. ":"")+"Cinque piani di scale, una porta scardinata dagli inquilini, e sei sopra Harlem. Serbatoi d'acqua, comignoli, piccionaie abbandonate. La foschia si arrampica sui cornicioni come se respirasse. Puoi esaminare il BORDO, la PORTA, la MACCHIA"+(S.cl.includes('glint')?", o il tetto davanti al COTTON Club":"")+".",
+ acts:()=>[A('bord|cerca|esamin','BORDO',()=>{out("Sul bordo, rivolta verso il Fantasia, la stessa bava trasparente: vecchia di giorni, mischiata a ghiaia e guano. Ne raccogli un campione.");set('campione2')}),
+  A('port|matton|brucia','PORTA',()=>{out("Accanto alla porta, un mattone ha un angolo annerito, come bruciato da una fiamma che non c'era.");clue('bruciatura')}),
+  A('macch|fili|graff|pomell','MACCHIA',()=>{out("Graffi intorno al pomello, fili di lana scura tra i mattoni. Una macchia di bava grande come un uomo disteso. Qualcuno è stato chiuso fuori quassù. E non è più sceso.");clue('trappola')}),
+  A('cotton|altro|fronte|davanti','COTTON',()=>{out("Sul tetto di fronte al Cotton Club: segni di ginocchia nella polvere e l'orma di un orlo di gonna. Qualcuno ha spiato il club a lungo. Una donna. E i segni puntano in alto, sempre in alto.");clue('gonna');clue('alto')},()=>S.cl.includes('glint')),EXIT()]};
+SC.cleopatra={img:'cleopatra',text:()=>"Il Cleopatra: una bettola nel seminterrato sotto una rosticceria. Piastrelle egizie crepate, bancone nero e oro opaco. Il locale si ammutolisce. La barista, Maria Viano, rauca: 'Ti sei persa, bambola?'",
+ after(){if(S.vis.cleopatra>1){out("'Ancora tu.' Maria ti versa da bere senza chiedere.");return}const r=roll('AUTOCONTROLLO',0,3,3);
+  if(r!=='P'){out("Ti presenti come una delle ragazze di Sal, curiosa e un po' spaventata. Ti accolgono.");vant('RAGAZZA DEL CLEOPATRA')}else{out("Risposte caute. Un ragazzo sguscia fuori dal retro: va a fare la spia al Fantasia.");suspect()}
+  out("Chiedi a Maria di JIMMY e RICKY, di TONY, di MAD DOG, dei BOSS.")},
+ acts:()=>[A('jimmy|ricky|spariti','JIMMY E RICKY',()=>{out("'Li hanno fatti fuori gli irlandesi. Big Frenchy è un vero bastardo. Oppure sono scappati coi soldi... il signor Charlie si è arrabbiato parecchio con Sal.' Poi, più piano: 'Uno giura di aver visto Ricky andare al Fantasia, la sera che è sparito. Una delle ragazze del locale era uscita a incontrarlo.'");clue('donna_ricky')}),
+  A('tony|corpo|fiume|testa','TONY',()=>{out("'Ieri hanno ripescato un corpo nell'East River. Non uno dei nostri. Ma ridotto come Tony.'");clue('fiume')}),
+  A('dog|mad dog|coll|fantasm|vedov','MAD DOG',()=>{out("'Mad Dog faceva sparire la gente da casa: niente sangue, niente porte sfondate. L'hanno ammazzato a colpi di mitra, ma certi spiriti non se ne vanno zitti. E la sua vedova, Lottie... l'ho vista qui intorno. Qualcuno la chiamava con un altro nome.'");clue('vedova')}),
+  A('boss|capi|incontr|vertic|riunion','BOSS',()=>{out("'Dicono che i grandi capi si incontreranno per capire chi li sta colpendo. Dove, non lo so. E non lo voglio sapere.'");clue('vertice')}),EXIT()]};
+SC.obitorio={img:'obitorio',text:()=>"Bellevue. Il medico legale ti accoglie quasi felice: 'Finalmente un giornalista! Un caso curiosissimo.' Puoi chiedergli del CASO o GUARDARE il corpo.",
+ acts:()=>[A('caso|parla|chied|dimm|morto','CASO',()=>{out("'Niente testa, mai trovata. Il collo sembra cauterizzato. E dentro... il cuore al posto della milza, la cistifellea sotto la spalla. Tutto al posto sbagliato. Nel portafogli: dieci dollari e i documenti di Mickey O'Malley. Lavorava al Cotton Club. Sul colletto, una macchia di rossetto.'");clue('mickey');clue('madden')}),
+  A('guard|vedi|cassett|lenzuol|corpo','GUARDA',()=>{if(has('morgue_seen')){out("Una volta basta.");return}set('morgue_seen');const r=roll('EQUILIBRIO',S.v.includes('FATTI FORZA')?1:0,5,3);
+   if(r==='S'){out("Lo guardi come una tavola di anatomia. Affascinante e orribile.");vant('FATTI FORZA')}else if(r==='T')out("Senza testa, aperto, l'odore di pesce... ti tremano le gambe, ma resisti.");else{out("L'orrore ti colpisce nel profondo. Qui è successo qualcosa di innaturale.");trauma('FORZE SOVRANNATURALI');if(S.trauma>=3){madness();return}}}),EXIT()]};
+SC.lottie={img:'lottie',text:()=>"140a Strada. Lottie Kriesberger Coll ti apre: completo di serge, onde di una tinta troppo uniforme. Sul camino, le foto di Mad Dog. Due specchi uno di fronte all'altro fanno continuare la stanza all'infinito. Le sue dita accarezzano di continuo il POLSO destro. Parlale di suo MARITO, di MADDEN, dei suoi DISEGNI.",
+ after(){if(S.vis.lottie>1)return;const r=roll('CAMUFFARSI',0,5,3);if(r==='S'){out("Per strada i ragazzi di Sal ti sono passati accanto senza riconoscerti.");vant('A UN METRO DA TERRA')}
+  else if(r==='T'){out("Lottie ti scruta: 'Non ti ho vista entrare al Fantasia, vestita diversamente?' Sorride. Non aspetta risposta.")}else{out("Due ragazzi di Sal si sono voltati due volte quando sei entrata nel portone.");suspect()}},
+ acts:()=>[  A('madden|cotton|irlandes','MADDEN',()=>{out("'Resterò in questo quartiere finché non vedrò il Cotton Club fallire. Madden fa l'impresario, ma è un assassino a sangue freddo. Lui e Big Frenchy. Vuoi il pettegolezzo vero? Chiedi agli artisti: si ritrovano nel seminterrato del 646 di Lenox, dopo lo spettacolo.'");clue('madden');clue('sotto')}),
+A('marit|coll|dog|mad dog','MARITO',()=>out("'Mio marito aveva più visione dei suoi capi. Sono io che l'ho spinto a mettersi in proprio. Senza di me non ne avrebbe mai avuto i mezzi.' Un sorriso amaro.")),
+  A('disegn|bozzett|stilist|moda|lavor','DISEGNI',()=>out("Ti mostra i suoi bozzetti. Moda del '34... poi un abito fatto interamente di specchi in frantumi. 'Le molte angolazioni dell'anima', dice, e per un istante le brillano gli occhi.")),
+  A('polso|braccial|specch|ellie','POLSO',()=>{out("Al polso porta un braccialetto di frammenti di specchio saldati insieme.");clue('bracciale_lottie');
+   if(S.cl.includes('bracciale')){set('ellie_lottie');out("È il braccialetto di Ellie. Lottie si irrigidisce, poi ride piano: 'Sì, ho lavorato al Fantasia. Come Ellie Knussen. Nessuno assume la vedova di Mad Dog.' E Tony? 'Volevo solo dimostrare a me stessa che potevo averlo.' Jimmy e Ricky? 'Li conoscevo appena.' Non mente. Ma l'amarezza le trabocca dagli occhi.");clue('sospetta')}
+   else out("'Me lo sono fatto da sola, alla scuola di design. Mi annoiavo.'")}),EXIT()]};
+SC.fantasia={img:'camerino',enter(){if(S.susp>0){S.susp--;if(!S.susp)dropG('SAL È SOSPETTOSO')}},text:()=>"Torni al Fantasia per una serata di lavoro. Sorridi, balli, fai bere un commerciante di Toledo. Sal ti guarda un po' meno storto. Peaches ti fa cenno dal camerino.",
+ acts:()=>[A('peaches|ragazz|ellie|parla','PEACHES',()=>{out("Peaches, a bassa voce: 'Ellie portava ogni sera un braccialetto di specchi. Viveva qui vicino. I ragazzini dicono che in realtà è la signora Coll, la vedova di quel pazzo di Mad Dog. Si era tinta di biondo.'");clue('bracciale');clue('vedova');set('ellie_lottie');clue('sospetta')}),
+  A('client|delaney|trappol|agguat','TRAPPOLA CLIENTE',()=>{set('peaches_help');out("Peaches ci sta: stanotte spingerà il cliente di Ellie verso di te, se ti apposti.")},()=>has('delaney_fail')&&!has('delaney_met')),EXIT()]};
+SC.cotton={img:'cotton_ext',text:()=>"Lenox Avenue e la 142a. L'insegna del COTTON CLUB brucia di lampadine. Porti con te Esteban, il tuo amico esploratore: una donna sola non entra.",
+ after(){if(!has('cotton_try')){set('cotton_try');const r=roll('CAMUFFARSI',0,4,4);if(r!=='P'){set('cotton_ok');out("Big Frenchy, appoggiato al muro, non ti degna di uno sguardo.")}else out("Big Frenchy si stacca dal muro e sparisce nel retro. Ti ha riconosciuta.")}go('cotton_sala')}};
+SC.cotton_sala={img:'cotton',text:()=>"Tovaglie bianche, l'alta società di New York, un'orchestra che fa tremare i bicchieri. Sul palco la grande diva della stagione canta, e una nebbia artificiale scivola sul pubblico. A un tavolo vicino al palco: Owney MADDEN, faccia da bambino e occhi da pugile. Una porta di servizio porta al BACKSTAGE.",
+ acts:()=>[  A('coll|dog|mad dog|vedov','COLL',()=>out("'Coll era diventato troppo sicuro di sé. La vedova? Vivi e lascia vivere.' Indifferenza perfetta."),()=>has('madden_talk')),
+  A('frenchy','FRENCHY',()=>out("'Mad Dog lo rapì una volta. Pagai il riscatto. Frenchy farebbe qualsiasi cosa per me.'"),()=>has('madden_talk')),
+  A('mick|malley|fiume','MICKEY',()=>out("'Mick? Un incidente in barca, dicono. Era qui da poco, venuto dall'Irlanda. Povera madre.' Distoglie lo sguardo."),()=>has('madden_talk')),
+  A('minacc|bigliett|lettere','MINACCE',()=>out("Sorpreso, confuso: 'Minacce al Fantasia? Non ne so niente.' Dice la verità."),()=>has('madden_talk')),
+  A('mano|nera|rassicur|nora','MANO NERA',()=>{if(has('madden_office')){out("Ti ha già detto tutto.");return}
+   if(has('cotton_ok')||S.cl.includes('manonera')||S.v.includes('COME UNA VERA PROFESSIONISTA')){set('madden_office');qimg('madden_uff');
+    out("La paura gli passa negli occhi. Lo rassicuri: forse puoi aiutarlo. Madden ti porta nel suo ufficio e ti mostra un biglietto: la MANO NERA, una mano trafitta da uno stiletto.");
+    if(S.cl.includes('biglietti')){out("La grafia... è la stessa dei biglietti 'irlandesi' nel cassetto di Marty. Qualcuno sta scrivendo a entrambe le parti.");clue('doppiogioco')}
+    out("'Incontrerò gli italiani. Mezzanotte di domani, da Nino, la drogheria sulla 132a e Park. Frenchy dice che è una trappola. Non la porto con me... ma lei avrebbe una bella storia.'");clue('nino');qimg('cotton');out('Cosa fai?','dim')}
+   else out("'Se Nora ha parlato della Mano Nera, avrebbe fatto meglio a tacere.' Madden si alza. Fine dell'intervista.")},()=>has('madden_talk')),
+A('madden|parla|tavol|owney|siedi','MADDEN',()=>{qimg('madden');set('talked_madden');out(has('cotton_ok')?"Madden ti raggiunge con una sedia in più. 'Vivian Sinclair, giusto? Leggo i suoi articoli.'":"Madden si siede al tuo tavolo, sorriso di plastica. 'Una ragazza del Fantasia nel mio club. Gli italiani mandano spie, adesso?'");
+   out("Si vanta del club, dell'orchestra, della sua birra legale. Ma qualcosa in te lo rende nervoso. Chiedigli di COLL, di FRENCHY, di MICKEY, delle MINACCE, della MANO NERA.");set('madden_talk')}),
+  A('backstag|quint|retro|dietro|servizio|camerin','BACKSTAGE',()=>{if(has('bs_out')){out("Big Frenchy non ti perde di vista.");return}const r=roll('FURTIVITÀ',has('talked_madden')?0:-2,4,2);
+   if(r==='S'){vant('PASSO LEGGERO');out("Approfitti di un numero scatenato e sgusci oltre la porta di servizio.");go('backstage')}else if(r==='T'){out("Oltre la porta ti trovi faccia a faccia con Big Frenchy. 'Svolta sbagliata', sorridi. Lui ti scorta al tavolo.");set('bs_out')}
+   else{out("Big Frenchy si materializza alle tue spalle. 'Paghi il conto e vada a divertirsi altrove.' Nei suoi occhi: ti butterebbe in strada lui stesso.");guaio('PIÙ FACILE ENTRARE CHE USCIRE');leave()}}),EXIT()]};
+SC.backstage={img:'backstage',text:()=>"Corridoi stretti, lampadine nude, ballerine che si massaggiano i polpacci. Tutti alzano gli occhi quando arrivi. Puoi parlare con la DIVA, con le BALLERINE, o cercare l'UFFICIO di Madden.",
+ acts:()=>[A('diva|cantant|stella|star','DIVA',()=>{out("La diva ti concede cinque minuti. Ha girato il mondo, ma Harlem è casa. 'Di strano qui? Faccio di tutto per non notare niente.' Poi esita. 'Una notte, tornando a casa, ho visto un lampo sul tetto del palazzo di fronte. Un secondo, e via.'");clue('glint')}),
+  A('ballerin|coro|sigarett|ragazz','BALLERINE',()=>{out("Qualche sigaretta scioglie le lingue. 'Vuoi le storie vere? Scendi nel seminterrato del 646 di Lenox, dopo lo spettacolo. Ma non scriverlo sul giornale.'");clue('sotto')}),
+  A('uffic|madden|scrivan|cassett|busta','UFFICIO',()=>{if(has('madden_office')){out("Ci sei già stata.");return}set('madden_office');qimg('madden_uff');
+   out("La serratura cede. Pannelli di legno, odore di sigaro. Nel cassetto, una busta con scritto FRENCHY: un biglietto di Madden. 'Mezzanotte di domani, da Nino, 132a e Park. Ci vado io. Non discutere.' E un secondo foglio: MADDEN, una mano trafitta da uno stiletto. La MANO NERA.");clue('nino');
+   if(S.cl.includes('biglietti')){out("La grafia... è la stessa dei biglietti 'irlandesi' nel cassetto di Marty. Qualcuno sta scrivendo a entrambe le parti.");clue('doppiogioco')}qimg('backstage');out('Cosa fai?','dim')}),
+  A('tett|sali','TETTO',()=>out("Sul tetto, la piccionaia di Madden: piccioni da corsa, nostalgia di un ragazzo di strada.")),EXIT()]};
+SC.sotto={img:'sotto',text:()=>"Seminterrato del 646 di Lenox. Il pianoforte si ferma. Le teste si girano. Qui gli artisti del Cotton Club respirano, lontani dalla sala per soli bianchi.",
+ after(){if(S.vis.sotto>1)return;const r=roll('AUTOCONTROLLO',0,3,3);if(r!=='P'){set('sotto_ok');out("Fai il nome di qualche amico comune e giuri che non sei qui per scrivere di loro. Le spalle si rilassano. Puoi chiedere di MADDEN, della DONNA bianca, o parlare con la BALLERINA più giovane.")}
+  else out("Parole caute, sguardi freddi. Preferirebbero che ti annoiassi e te ne andassi. Forse qualcuno ti dirà qualcosa su MADDEN.")},
+ acts:()=>[A('madden|strano|nervos|trombett','MADDEN',()=>{out("Un trombettista dalle guance enormi: 'Madden di solito tiene l'ordine. Ma da una settimana è nervoso. Arrivano ragazzini con biglietti per lui: una signora bianca li paga un nichelino a consegna.'");clue('messaggera')}),
+  A('donna|signora|velo|bianca','DONNA',()=>{out("'Un paio di settimane fa è scesa qui una bianca. Velo sul viso con paillettes d'argento, come specchietti. E un braccialetto di specchi. Fumava e non parlava. Metteva i brividi.'");clue('bracciale')},()=>has('sotto_ok')),
+  A('ballerin|giovan|ragazz|incontr','BALLERINA',()=>{out("Una ballerina di diciassette anni, la voce che trema: 'Ho sentito Madden e Frenchy litigare. Un incontro con gli italiani, a mezzanotte di domani, in una drogheria con una lavanderia accanto. Frenchy diceva che è una trappola.'\nConosci Harlem: è la drogheria di Nino, 132a e Park.");clue('nino')},()=>has('sotto_ok')),EXIT()]};
+SC.irruzione={img:'lottie_vuoto',enter(){set('irrotto')},text:()=>"Torni sulla 140a. L'appartamento di Lottie è vuoto: se n'è andata in fretta. Gli specchi ti moltiplicano in un corridoio senza fine. Sul tavolo, un DIARIO. Nell'armadio, QUADERNI e una CUSTODIA.",
+ after(){const r=roll('FURTIVITÀ',0,4,4);if(r!=='P')out("Eludi vicini e vedette. La serratura cede senza rumore.");else{out("Una sentinella di Sal ti ha vista entrare. Lo sai. Hai pochi minuti.");set('watched')}},
+ acts:()=>[A('diar|tavol','DIARIO',()=>{out("Ultima pagina: 'Finalmente! Sal ha abboccato, dopo Tony. Incontreranno Madden a mezzanotte dal droghiere sulla 132a. Gli italiani distruggeranno tutto quello che quel BASTARDO ha costruito.'");clue('nino');out('LEGGI TUTTO?','dim')}),
+  A('leggi|tutto|resto|pagin','LEGGI TUTTO',()=>{out("Una pietra piatta con l'impronta di due artigli, trovata da suo padre nella Grande Guerra. Una scatola di fiammiferi con un sigillo disegnato dentro: la pietra tocca il sigillo, e il SEGUGIO arriva attraverso gli angoli del tempo. Il braccialetto di specchi lo confonde e gli riflette un nuovo bersaglio.\nJimmy, Ricky, Tony, Mickey. Tutti attirati su un tetto.");clue('segugio');clue('alto')}),
+  A('quadern|schizz|disegn|armad','QUADERNI',()=>out("Bozzetti di moda. Poi fumo vorticoso a carboncino, e teste allungate di qualcosa che non è un cane.")),
+  A('custod|binocol','CUSTODIA',()=>{out("Una custodia vuota per binocolo. Lottie guarda le sue vittime dall'alto.");clue('alto')}),
+  EXIT(()=>{if(has('watched')){delete S.f.watched;go('sentinella')}else leave()})]};
+SC.sentinella={img:'drogheria',text:()=>"Sulla porta, tre uomini di Sal. 'Guarda guarda. L'amica della vedova.'",
+ acts:()=>[A('convin|spieg|parla|indag|giornal|ment|rassic','CONVINCILI',()=>{const r=roll('AUTOCONTROLLO',0,3,3);if(r!=='P'){out("Li convinci che indagavi anche tu: il tempismo è sospetto, ma vedi che hanno tutto sotto controllo. 'Non farti più vedere da queste parti.'");leave()}else{out("Non ti credono. Una mano sul braccio, un'altra sulla bocca.");capture()}}),
+  A('scapp|fugg|corr','SCAPPA',()=>{const r=roll('FUGA',0,4,4);if(r!=='P'){out("Ti infili sotto un braccio e voli giù per le scale. Fuori, la nebbia ti inghiotte.");leave()}else{out("Non arrivi al pianerottolo.");capture()}})]};
+// ---------- FINALE
+SC.nino={img:'nino',text:()=>"Le 23. 132a e Park. La sopraelevata passa a tre metri dalle finestre della drogheria di Nino; accanto, il rombo di una lavanderia. Auto scure, uomini col cappello. In fondo all'isolato, dove il treno piega verso il fiume, si alza la TORRE di ferro del ponte, nera contro la luna quasi piena."+(S.cl.includes('alto')||S.cl.includes('trappola')||S.cl.includes('bruciatura')?"\nLei uccide dall'alto. Sempre.":"")+"\nPuoi salire sulla TORRE, ENTRARE nella drogheria o ASPETTARE in strada.",
+ acts:()=>[A('torr|ponte|sali|scala|alto','TORRE',()=>go('torre')),
+  A('entr|droghe|nino|dentro|porta','ENTRA',()=>{out("Fai due passi verso la porta laterale. Una mano ti afferra il braccio: gli uomini di Sal. 'E tu che ci fai qui, bambola?'");go('ospite')}),
+  A('aspett|guard|strad|resta|nascond','ASPETTA',()=>{set('late');out("Aspetti nell'ombra. A mezzanotte un urlo sotto la sopraelevata; la nebbia si arrotola sugli angoli dei palazzi. Alzi gli occhi: in cima alla torre del ponte, un lampo d'argento. Corri.");go('torre')})]};
+SC.torre={img:'torre',text:()=>"Usi i piloni della sopraelevata come copertura fino alla base della torre. Una scala di ferro si attorciglia verso la passerella. Lassù, accovacciata contro la luna, una figura con un binocolo. Al polso, un bagliore.",
+ after(){let m=0;if(S.cl.includes('sospetta'))m+=1;if(S.cl.includes('segugio'))m+=1;if(has('late'))m-=2;const r=roll('FURTIVITÀ',m,6,3);
+  if(r==='S'){vant('EQUILIBRIO PERFETTO');set('cbonus',2);qimg('torre');out("Lottie Coll fissa la drogheria, rapita. Sei a tre metri da lei. Non ti ha sentita.\nPuoi AFFERRARE la pietra o PARLARLE.")}
+  else{qimg('lottie_conf');out((r==='T'?"Sei sulla rampa sotto di lei quando Lottie si volta.":"Lottie ti vede dal primo gradino. Ti aspetta, sorridendo.")+" 'Vivian Sinclair. Sapevo che saresti venuta.'");monologue();if(r==='T')fight();else{out("Prima che tu la raggiunga, la pietra tocca il sigillo.");go('segugio')}}},
+ acts:()=>[A('afferr|strapp|prend|attacc|salta|lott|pietra|blocc','AFFERRA',()=>fight()),A('parl|chiam|lottie|ferma','PARLA',()=>{qimg('lottie_conf');out("Pronunci il suo nome. Lottie si volta lentamente.");set('cbonus',0);monologue();fight()})]};
+function monologue(){out("'Madden mi ha portato via mio marito. Coll era la mia chiave, ma il potere glielo davo io: la pietra di mio padre, e ciò che richiama. Non voglio solo Madden morto. Voglio che gli italiani distruggano tutto quello che ama.'\nDalla tasca: una pietra piatta con l'impronta di due artigli, e una scatola di fiammiferi. Dentro la scatola, un sigillo.")}
+function fight(){const r=roll('COMBATTIMENTO',S.f.cbonus||0,5,5);qimg('lottie_conf');
+ if(r==='S'){out("Le blocchi il polso contro la ringhiera. La pietra, la scatola, e il braccialetto che le strappi: ora sono nelle tue mani. Il ferro vibra. Sotto di te, il fiume nero.\nUn impulso ti dice di GETTARE tutto nel fiume. Oppure potresti TENERLI: la prova di tutto.");S.scene='presa';save()}
+ else{out("Lottie è più forte di quanto sembri. Ti respinge e la pietra tocca il sigillo.");go('segugio')}}
+SC.presa={img:'lottie_conf',text:()=>"Hai la pietra, la scatola e il braccialetto. Lottie ti fissa, ansimando. GETTA o TIENI?",
+ acts:()=>[A('gett|butt|fium|lanc|via|sbarazz','GETTA',()=>{S.headline=HL.mad;ending(1,'fiume',"La pietra cade nel fiume senza un suono. La scatola la segue. Il braccialetto si spezza sull'acqua nera in cento piccole lune. Lottie urla come se le avessi strappato il cuore.\nAll'alba la consegni a O'Connor. Nessuno crederà mai al Segugio, ma quattro omicidi bastano.\n"+(S.goal==='ragazze'?"Il tuo articolo, 'Ho lavorato in un night club', esce senza fare nomi. Le ragazze del Fantasia lo leggono in camerino, ad alta voce.":"Il tuo articolo sul Fantasia e i soldi di Lucky fa tremare mezzo Municipio.")+"\nSettimane dopo: Owney Madden lascia New York per Hot Springs. Su Harlem, la nebbia si alza.")}),
+  A('tien|conserv|prova|tasca|portal','TIENI',()=>{qimg('segugio');out("Il ferro gela sotto le tue dita. Dall'angolo acuto di una trave cola una nebbia blu: il Segugio arriva comunque. Fiuta l'aria, e trova l'odore che conosce da anni. Lottie, senza specchi, non ha più dove nascondersi.\nNon guardi. Quando il silenzio torna, la bestia si gira verso la pietra nella tua mano.");S.scene='ultima';out('GETTALA, presto!','roll')})]};
+SC.ultima={img:'segugio',text:()=>"La lingua cava frusta l'aria verso la tua mano.",acts:()=>[A('gett|butt|lasc|lanc|fium|mollal','GETTALA',()=>{S.headline=HL.mad;ending(2,'giornale',"Lanci la pietra lontano. La bestia la segue attraverso un angolo che non esiste e scompare. Restano solo la nebbia e una scatola di fiammiferi bruciata.\nNessun giornale pubblicherà la verità. Scrivi un'altra storia, e la verità te la tieni stretta come un dente rotto.\nSettimane dopo, Madden se ne va a Hot Springs. Tu, a volte, eviti gli angoli.")}),
+ A('fugg|scapp|corr|tien','FUGGI',()=>ending(4,'decap',"Corri, con la pietra stretta nel pugno. Il Segugio non ha bisogno di correre: è già nell'angolo davanti a te.\nUna lingua fredda e acida ti si stringe attorno al collo. L'ultimo pensiero è per la storia che non scriverai."))]};
+SC.segugio={img:'segugio',text:()=>"Il mondo tace. Dall'angolo acuto di una trave cola una nebbia blu. Poi una testa, lunga, sbagliata. Un corpo magro che non è un cane, che non è niente. Una lingua cava che frusta l'aria.",
+ after(){const r=roll('EQUILIBRIO',0,6,3);if(r==='S'){out("Sai che esiste, e sai chi lo comanda. Tutto si riduce alla vendetta di una donna.");vant('TUTTO TROPPO UMANO')}else if(r==='T')out("Il terrore ti inonda il cervello. Resta solo un pensiero: un predatore c'è, dove prima non c'era.");else{trauma('DA UN ALTRA DIMENSIONE');if(S.trauma>=3){madness();return}}
+  out("Il Segugio punta Lottie. Lei alza il polso e fa ruotare il braccialetto: mille schegge di luce. La bestia si ferma... e si volta verso di te.\nPuoi FUGGIRE o colpire il BRACCIALETTO.")},
+ acts:()=>[A('fugg|scapp|corr','FUGGI',()=>{const r=roll('FUGA',0,5,3);if(r==='S'){out("Corri, dritta contro Lottie. L'impatto vi manda entrambe contro la ringhiera.");set('fb',2);youOrLottie()}else if(r==='T'){out("Provi a mettere Lottie tra te e il mostro, ma la bestia non si ferma per lei. Devi voltarti e affrontarla.");youOrLottie()}
+   else ending(4,'decap',"Lottie salta giù dalla passerella sui binari e fugge. L'ultima cosa che vedi è il bagliore del braccialetto.\nPoi una lingua fredda e acida ti si stringe attorno al collo. All'alba, gli operai della ferrovia troveranno quello che resta di Vivian Sinclair.")}),
+  A('braccial|rompi|spezz|lottie|attacc|lott|colpis|strapp|specch','BRACCIALETTO',()=>youOrLottie())]};
+function youOrLottie(){let m=(S.f.fb||0)+(S.cl.includes('segugio')?2:0);const r=roll('COMBATTIMENTO',m,6,3);
+ if(r==='S'){S.headline=HL.mad;ending(2,'giornale',"Le afferri il polso e lo sbatti contro il ferro. Il braccialetto si spezza. Il Segugio sente l'odore di chi lo ha schernito per anni, e non sbaglia più bersaglio.\nNon guardi. Quando ti volti, sulla passerella restano una pietra in frantumi e una scatola di fiammiferi bruciata.\nNessun giornale pubblicherebbe la verità. Settimane dopo: Madden lascia il Cotton Club per Hot Springs. Tu impari a guardare gli angoli delle stanze.")}
+ else if(r==='T'){qimg('decap');out("Ti ritrovi a terra, inchiodata sotto Lottie. Non riesci a rompere il braccialetto. Ma il Segugio ha altri sensi: conosce il suo odore, quello di chi tiene la pietra. La bava ti cola sul viso mentre la bestia prende lei, sopra di te.");
+  const r2=roll('EQUILIBRIO',0,4,4);if(r2!=='P'){S.headline=HL.mad;ending(3,'torre',"Il Segugio scompare in un angolo della trave. Resti sulla passerella fino all'alba, a respirare.\nPer giorni non dormi. Poi, un mattino, cataloghi la cosa tra gli orrori che hai visto, e ricominci a scrivere. Nessuno richiamerà più quella bestia. Devi crederlo.")}else madness()}
+ else ending(4,'decap',"Lottie ti lascia, ferita, sulla traiettoria del Segugio. La lingua scende, e comincia ad avvolgerti.\nIl tuo ultimo pensiero è per la storia che nessuno scriverà. All'alba, gli operai della ferrovia fanno una scoperta orribile. Madden non muore, quella notte. Ma lascia New York lo stesso.")}
+function madness(){ending(8,'frantumi',"La tua mente si spezza in piccoli frammenti, come il braccialetto di Lottie. Per rimetterli insieme ci vorrà tempo, e non sarai più la stessa.\nTi risvegli in una stanza bianca. Louisa, la tua amica infermiera, ti tiene la mano. Fuori, la nebbia. Dentro, gli angoli. Troppi angoli.")}
+SC.ospite={img:'drogheria',text:()=>"Il secondo piano della drogheria di Nino. Il treno sfreccia a tre metri dalle finestre e fa tremare i bicchieri. Sal ti fa sedere in un angolo: 'Prima chiariamo col signor Madden. Poi vediamo che fare di te.'\nMadden arriva rosso in viso, disarmato. Niente Frenchy.",
+ acts:()=>[A('aspett|osserv|guard|ascolt|zitt|nulla|niente','ASPETTA',()=>attack()),A('parl|sal|madden|spieg','PARLA',()=>{out("Apri bocca, ma in quel momento...");attack()}),A('fugg|scapp','FUGGI',()=>{out("Un uomo di Sal ti rimette a sedere con una mano sola. E in quel momento...");attack()})]};
+function attack(){qimg('segugio');out("Spari in strada. Qualcuno spegne la luce, gli uomini aprono le tende. Dall'angolo della drogheria esce una cosa magra e angolosa che avvolge la lingua attorno a uno degli uomini di Sal. I proiettili non le fanno niente.");
+ const r=roll('EQUILIBRIO',0,6,3);if(r==='S'){out("Ti concentri sull'umanità dietro il mostro. Tutto si riduce alla vendetta di una donna.");vant('TUTTO TROPPO UMANO')}else if(r==='T')out("Il sangue ti si gela. Stringi i denti.");else{trauma('DA UN ALTRA DIMENSIONE');if(S.trauma>=3){madness();return}}
+ qimg('drogheria');out("Dieci secondi, poi la cosa svanisce in un angolo. Due uomini trascinano dentro una donna che si dibatte: Lottie Coll. 'La cosa non l'abbiamo presa. Lei sì.' Lottie infila le mani in tasca.\nPuoi DISARMARLA o LASCIARE fare agli uomini.");S.scene='ospite2';save()}
+SC.ospite2={img:'drogheria',text:()=>"Lottie ha le mani in tasca. DISARMALA o LASCIA fare?",
+ acts:()=>[A('disarm|afferr|blocc|strapp|salt|ferm|attacc|mani','DISARMALA',()=>{const r=roll('COMBATTIMENTO',0,5,3);
+   if(r==='S'){out("Le immobilizzi i polsi: una pietra con l'impronta di due artigli, una scatola di fiammiferi coperta di sigilli. E il braccialetto, che le sfili.");set('pbonus',3);persuade()}
+   else if(r==='T'){out("Non riesci a strapparle niente, ma la distrai abbastanza: uno degli uomini di Sal le prende tutto.");persuade()}
+   else{out("Ti butti su di lei così male che metà degli uomini ti scambia per lei. Lottie sguscia via giù per le scale, e la nebbia torna a colare dagli angoli.");escape()}}),
+  A('lasc|aspett|niente|uomin|guard','LASCIA',()=>{out("Gli uomini di Sal la bloccano e le svuotano le tasche: una pietra, una scatola di fiammiferi.");persuade()})]};
+function persuade(){out("Sal rigira la pietra e la scatola tra le dita, affascinato. 'Così è fatto il vostro trucco irlandese, eh? Vediamo cosa succede se...'"+(S.f.pbonus?"":" Lottie, col braccialetto al polso, lo provoca: 'Hai paura di provare?'")+"\nDevi CONVINCERE Sal a gettare tutto nel fiume.");S.scene='persuadi';save()}
+SC.persuadi={img:'drogheria',text:()=>"Sal soppesa la pietra. CONVINCILO.",acts:()=>[A('convin|parl|fium|gett|ferm|spieg|rassic|prego|non','CONVINCI',()=>{const r=roll('AUTOCONTROLLO',S.f.pbonus||0,6,3);
+ if(r!=='P'){if(r==='S')vant('UNA DONNA PERSUASIVA');S.headline=HL.mad;ending(5,'sanatorio',"Gli racconti di Tony, di Jimmy, di Ricky. Di cosa arriva dagli angoli. Sal guarda Madden, Madden guarda Sal. La pietra finisce nell'East River.\nNessuno vuole essere l'uomo che uccide una donna. Proponi un sanatorio: conosci un'infermiera, Louisa. Lottie viene portata via all'alba, il polso nudo, lo sguardo perso negli angoli.\nTi mostrano la porta: 'Pensaci bene, prima di scrivere.' Settimane dopo, Madden lascia New York per sempre.")}
+ else{out("Sal ride delle tue paure e accosta la pietra al sigillo.");qimg('segugio');out("La nebbia cola dall'angolo del soffitto. La bestia non cerca Lottie: il braccialetto la protegge. Cerca chi tiene la pietra. Sal non ha il tempo di urlare.");escape()}})]};
+function escape(){const r=roll('FUGA',0,4,4);if(r!=='P'){S.headline=HL.dead;ending(6,'fuga',"Ti butti giù per le scale mentre alle tue spalle esplode l'inferno: spari, urla, il treno che passa. Corri sotto la sopraelevata finché non hai più fiato.\nAl mattino i giornali parlano di una sparatoria tra bande. Sal Rossi è morto. Lottie Coll è sparita nella città. Madden lascia New York. E tu sai che, da qualche parte, qualcuno ha ancora una scatola di fiammiferi.")}
+ else ending(4,'decap',"Inciampi sul primo gradino. La nebbia è già lì, in ogni angolo della tromba delle scale.\nUna lingua fredda e acida ti si stringe attorno al collo. L'ultimo pensiero è per la storia che non scriverai.")}
+
+// ================= SAVE / TITLE =================
+function save(){try{if(S&&S.scene&&S.scene[0]!=='_')localStorage.setItem('nebbia_save',JSON.stringify(S))}catch(e){}}
+function clearSave(){try{localStorage.removeItem('nebbia_save')}catch(e){}}
+function loadSave(){try{const s=localStorage.getItem('nebbia_save');return s?JSON.parse(s):null}catch(e){return null}}
+function toTitle(){mode='title';queue=[];page=null;waitKey=false;promptOn=false;curImg='title';imgT0=performance.now();input='';inp.value=''}
+function newGame(){S=newState();mode='play';queue=[];page=null;waitKey=false;fails=0;
+ out("Scrivi cosa vuoi fare e premi INVIO: bastano parole semplici, come BALLA o PARLA CON NORA. Scrivi AIUTO se sei bloccata, TACCUINO per i tuoi indizi.",'dim');qimg('strada');go('i1');pump()}
+function contGame(s){S=s;mode='play';queue=[];page=null;waitKey=false;fails=0;out('Bentornata, Viv.','dim');go(S.scene);pump()}
+
+// ================= AUDIO =================
+let AC=null,master=null,muted=false,noiseBuf=null;
+function initAudio(){if(AC)return;try{AC=new(window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=.5;master.connect(AC.destination);
+ noiseBuf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+ const n=AC.createBufferSource();n.buffer=noiseBuf;n.loop=true;const bp=AC.createBiquadFilter();bp.type='bandpass';bp.frequency.value=420;bp.Q.value=6;const g=AC.createGain();g.gain.value=.035;
+ const lfo=AC.createOscillator();lfo.frequency.value=.07;const lg=AC.createGain();lg.gain.value=260;lfo.connect(lg);lg.connect(bp.frequency);
+ const lfo2=AC.createOscillator();lfo2.frequency.value=.13;const lg2=AC.createGain();lg2.gain.value=.025;lfo2.connect(lg2);lg2.connect(g.gain);
+ n.connect(bp);bp.connect(g);g.connect(master);n.start();lfo.start();lfo2.start();
+ const o=AC.createOscillator();o.type='sine';o.frequency.value=55;const og=AC.createGain();og.gain.value=.03;o.connect(og);og.connect(master);o.start()}catch(e){AC=null}}
+function tone(f,d,type='square',v=.05,f2){if(!AC||muted)return;const t=AC.currentTime,o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);
+ g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(master);o.start(t);o.stop(t+d+.02)}
+function nburst(d,v=.08,f=2000){if(!AC||muted)return;const t=AC.currentTime,s=AC.createBufferSource();s.buffer=noiseBuf;const fl=AC.createBiquadFilter();fl.type='highpass';fl.frequency.value=f;const g=AC.createGain();g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);s.connect(fl);fl.connect(g);g.connect(master);s.start(t,Math.random());s.stop(t+d+.02)}
+function sfx(k){if(!AC)return;if(k==='tick')tone(1800+Math.random()*300,.012,'square',.012);else if(k==='key')nburst(.03,.05,3000);else if(k==='enter')tone(660,.06,'square',.03);
+ else if(k==='static')nburst(.25,.06,800);else if(k==='dice'){for(let i=0;i<6;i++)setTimeout(()=>nburst(.04,.07,1500),i*110)}else if(k==='ding'){tone(880,.12,'square',.03);setTimeout(()=>tone(1320,.18,'square',.025),90)}
+ else if(k==='bad')tone(220,.35,'sawtooth',.04,110);else if(k==='end'){[523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,.2,'square',.03),i*140))}
+ else if(k==='howl'){tone(320,1.6,'sawtooth',.035,90)}}
+
+// ================= RENDER =================
+function renderImage(t){const im=IMG[curImg]||IMG.title;L.fill(0);im.d(t);
+ if(!im.nodark)for(let y=60;y<H;y++){const f=Math.max(.06,1-(y-60)/12);for(let x=0;x<W;x++)L[y*W+x]*=f}
+ const st=Math.max(0,1-(performance.now()-imgT0)/350);
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){let v=L[y*W+x];if(st>0)v=v*(1-st)+Math.random()*st*.8;v=v>0?Math.min(.999,Math.pow(v,.78)*1.12)*6:0;const b=v|0,fr=v-b;const ci=Math.min(6,b+(fr>BAYER[(y&3)*4+(x&3)]?1:0));const c=PAL[ci];
+  const i=(y*2)*SW+x*2;BUF[i]=c;BUF[i+1]=c;BUF[i+SW]=c;BUF[i+SW+1]=c}
+ if(im.ov)for(const o of im.ov())dstr(o.x,o.y,san(o.s),o.c,o.j)}
+function colFor(st){return st==='dim'?C_DIM:st==='roll'?C_ROLL:st==='hint'?C_HI:C_TXT}
+function renderText(now){tapZones=[];const blink=(now/400|0)%2;
+ if(mode==='title'){const f=found().length;const sv=loadSave();
+  if(sv){const s1='C = CONTINUA     N = NUOVA PARTITA';dstr((SW-s1.length*6)/2|0,176,s1,blink?C_TXT:C_DIM);tapZones.push({x:30,y:170,w:90,h:18,cmd:'c'},{x:130,y:170,w:110,h:18,cmd:'n'})}
+  else{const s1='PREMI UN TASTO PER INIZIARE';if(blink)dstr((SW-s1.length*6)/2|0,176,s1,C_TXT)}
+  const s2=`FINALI SCOPERTI: ${f}/8`;dstr((SW-s2.length*6)/2|0,194,s2,C_DIM);return}
+ const y0=SH-74;if(page){let left=Math.floor(page.shown);for(let i=0;i<page.lines.length;i++){const l=page.lines[i];const n=Math.max(0,Math.min(l.s.length,left));left-=l.s.length;const s=l.s.slice(0,n);
+  dstr(6,y0+i*10,s,colFor(l.st));if(l.st==='hint'&&n===l.s.length){const m=l.s.match(/^(Puoi: )?(.*)$/);let off=(m[1]||'').length;const parts=m[2].split(', ');for(const p of parts){const w=p.replace(/\*$/,'');tapZones.push({x:6+off*6-2,y:y0+i*10-2,w:p.length*6+4,h:12,cmd:w});off+=p.length+2}}}}
+ if(waitKey&&blink)dstr(SW-24,SH-14,'...',C_TXT);
+ if(promptOn&&(mode==='play'||mode==='yn')){const vis=input.length>38?input.slice(-38):input;dstr(6,SH-14,'>'+san(vis),C_TXT);if(blink)dstr(12+vis.length*6,SH-14,'█',C_TXT)}}
+function renderDie(now){if(!die)return;const el=now-die.t0,dur=900;const v=el<dur?1+((now/70|0)%6):die.d;const x=SW-34,y=8;
+ for(let j=0;j<26;j++)for(let i=0;i<26;i++){const e=i===0||j===0||i===25||j===25;BUF[(y+j)*SW+x+i]=e?C_HI:PAL[1]}
+ const P={1:[[1,1]],2:[[0,0],[2,2]],3:[[0,0],[1,1],[2,2]],4:[[0,0],[2,0],[0,2],[2,2]],5:[[0,0],[2,0],[1,1],[0,2],[2,2]],6:[[0,0],[2,0],[0,1],[2,1],[0,2],[2,2]]}[v];
+ for(const[a,b]of P){const cx=x+6+a*7,cy=y+6+b*7;for(let j=0;j<4;j++)for(let i=0;i<4;i++)BUF[(cy+j)*SW+cx+i]=C_HI}
+ if(el>dur+700){die=null;pump()}}
+let nf=0;function renderNoise(){nf++;if(nf%2)return;const id=nctx.createImageData(132,108),d=id.data;for(let i=0;i<d.length;i+=4){const v=Math.random()*255|0;d[i]=v*.6;d[i+1]=v;d[i+2]=v*.9;d[i+3]=255}nctx.putImageData(id,0,0)}
+function frame_(now){const t=now/1000;const dt=Math.min(.1,(now-(lastT||now))/1000);lastT=now;
+ if(page&&page.shown<page.chars){const before=page.shown|0;page.shown=Math.min(page.chars,page.shown+dt*95);if((page.shown|0)>before&&((page.shown|0)%3===0))sfx('tick');if(page.shown>=page.chars)pump()}
+ if(!die&&!waitKey&&(!page||page.shown>=page.chars)&&queue.length)pump();
+ renderImage(t);renderText(now);renderDie(now);sctx.putImageData(IMGD,0,0);gctx.clearRect(0,0,SW,SH);gctx.drawImage(scr,0,0);renderNoise();
+ if(curImg==='segugio'&&!frame_.h){frame_.h=1;sfx('howl')}if(curImg!=='segugio')frame_.h=0;
+ requestAnimationFrame(frame_)}
+requestAnimationFrame(frame_);
+
+// ================= INPUT =================
+const isTouch=matchMedia('(pointer:coarse)').matches;
+function anyKey(){initAudio();if(mode==='boot'){toTitle();return true}
+ if(mode==='title'){const sv=loadSave();if(sv){return false}newGame();return true}
+ if(advance())return true;return false}
+function handleChar(cmd){ // for title choices & yn
+ if(mode==='title'){const sv=loadSave();const c=norm(cmd);if(sv){if(c.startsWith('c'))contGame(sv);else if(c.startsWith('n')){clearSave();newGame()}}else newGame();return}
+ if(mode==='yn'){const c=norm(cmd);if(c.startsWith('s')||c.startsWith('y')){mode='play';newGame()}else if(c.startsWith('n')){toTitle()}return}
+ submit(cmd)}
+inp.addEventListener('input',()=>{initAudio();if(mode==='title'){const v=inp.value;inp.value='';if(loadSave())handleChar(v);else anyKey();return}
+ if(!promptOn){inp.value='';advance();return}input=inp.value;sfx('key')});
+inp.addEventListener('keydown',e=>{initAudio();if(e.key==='Enter'){e.preventDefault();if(mode==='title'){if(!loadSave())anyKey();return}if(!promptOn){advance();return}const v=input;input='';inp.value='';handleChar(v)}});
+addEventListener('keydown',e=>{if(document.activeElement!==inp){initAudio();if(e.key.length===1||e.key==='Enter'){inp.focus();if(mode==='boot'||(mode==='title'&&!loadSave())){anyKey();e.preventDefault();return}
+ if(!promptOn&&mode!=='title'){advance();e.preventDefault();return}}}});
+crt.addEventListener('pointerup',e=>{initAudio();const r=crt.getBoundingClientRect();const x=(e.clientX-r.left)/r.width*SW,y=(e.clientY-r.top)/r.height*SH;
+ for(const z of tapZones){if(x>=z.x&&x<=z.x+z.w&&y>=z.y&&y<=z.y+z.h){if(mode==='title'){handleChar(z.cmd);return}if(promptOn){input='';inp.value='';handleChar(z.cmd);return}}}
+ if(mode==='boot'||(mode==='title'&&!loadSave())){anyKey();inp.focus();return}if(!promptOn&&advance())return;inp.focus()});
+mode='boot';curImg='title';
+(function bootMsg(){mode='title'})();
+</script>
+</body>
+</html>
